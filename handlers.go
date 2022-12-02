@@ -608,6 +608,49 @@ func (h Handler) MockLoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/user/", http.StatusSeeOther)
 }
 
+func (h Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+    refreshToken, err := r.Cookie("ipaas-refresh-token")
+    if err != nil {
+        if err == http.ErrNoCookie {
+            http.Redirect(w, r, "/login", http.StatusFound)
+            return
+        } else {
+            resp.Error(w, http.StatusInternalServerError, err.Error())
+            return
+        }
+    }
+
+    db, err := connectToDB()
+    if err != nil {
+        resp.Error(w, http.StatusInternalServerError, err.Error())
+        return
+    }
+    defer db.Client().Disconnect(context.TODO())
+
+    refreshTokenCollection := db.Collection("refreshTokens")
+    _, err = refreshTokenCollection.DeleteOne(context.TODO(), bson.D{{"token", refreshToken.Value}})
+    if err != nil {
+        resp.Error(w, http.StatusInternalServerError, err.Error())
+        return
+    }
+
+    http.SetCookie(w, &http.Cookie{
+        Name: "ipaas-refresh-token",
+        Value: "",
+        Path: "/",
+        Expires: time.Unix(0, 0),
+    })
+
+    http.SetCookie(w, &http.Cookie{
+        Name: "ipaas-access-token",
+        Value: "",
+        Path: "/",
+        Expires: time.Unix(0, 0),
+    })
+
+    http.Redirect(w, r, "/login", http.StatusFound)
+}
+
 //!===========================PAGES HANDLERS
 
 // constructor
