@@ -19,9 +19,10 @@ function transition(from, to) {
 
 function logout() {
     //remove accessToken and refreshToken from cookie
-    document.cookie = "ipaas-access-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    document.cookie = "ipaas-refresh-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    window.location.href = "/login";
+//    document.cookie = "ipaas-access-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+//    document.cookie = "ipaas-refresh-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+//    window.location.href = "/login";
+    window.location.href = "/api/logout";
 }
 
 function logoutconfirm(x) {
