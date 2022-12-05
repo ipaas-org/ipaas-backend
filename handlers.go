@@ -49,9 +49,15 @@ func (h Handler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 
 	//check if it's the second phase of the oauth
 	if okCode && okState {
+        http.SetCookie(w, &http.Cookie{
+            Name:    "ipaas-session",
+            Value:   "",
+            Path:    "/",
+            Expires: time.Unix(0, 0),
+        })
 		//check if the state is valid (rsa encryption)
 		valid, redirectUri, state, err := CheckState(UrlState[0])
-		if err != nil {
+        if err != nil {
 			resp.Error(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -104,12 +110,6 @@ func (h Handler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 			Path:    "/",
 			Value:   ipaasRefreshToken,
 			Expires: time.Now().Add(time.Hour * 24 * 7),
-		})
-		http.SetCookie(w, &http.Cookie{
-			Name:    "ipaas-session",
-			Value:   "",
-			Path:    "/",
-			Expires: time.Unix(0, 0),
 		})
 
 		//if redirect uri is set send a post request with the tokens to that uri
