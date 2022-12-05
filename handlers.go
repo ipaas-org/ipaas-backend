@@ -612,6 +612,14 @@ func (h Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
     refreshToken, err := r.Cookie("ipaas-refresh-token")
     if err != nil {
         if err == http.ErrNoCookie {
+            if _, err = r.Cookie("ipaas-access-token"); err != http.ErrNoCookie {
+                http.SetCookie(w, &http.Cookie{
+                    Name:    "ipaas-access-token",
+                    Path:    "/",
+                    Value:   "",
+                    Expires: time.Unix(0, 0),
+                })
+            }
             http.Redirect(w, r, "/login", http.StatusFound)
             return
         } else {
