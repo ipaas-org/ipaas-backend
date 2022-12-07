@@ -1,4 +1,4 @@
-version: "3.9"
+version: "2.3"
 
 services:
     # go:
@@ -15,8 +15,8 @@ services:
     #   networks:
     #     - "ipaas"
     db:
-      image: mongo:5.0
-      restart: always
+      image: mongo:4.4.6
+      #restart: always
       environment:
         MONGO_INITDB_ROOT_USERNAME: vano
         MONGO_INITDB_ROOT_PASSWORD: vanovano
