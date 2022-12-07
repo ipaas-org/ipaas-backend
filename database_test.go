@@ -15,7 +15,7 @@ type db struct {
 	Comment       string
 }
 
-//should implmenet the other dbms
+// should implmenet the other dbms
 func TestCreateNewDB(t *testing.T) {
 	c, _ := NewContainerController()
 

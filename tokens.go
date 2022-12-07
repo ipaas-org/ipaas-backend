@@ -17,7 +17,7 @@ type RefreshToken struct {
 	Expiration time.Time          `bson:"expiration"`
 }
 
-//check if a refresh token is already in the database
+// check if a refresh token is already in the database
 func DoesRefreshTokenAlreadyExists(token string, connection *mongo.Database) (bool, error) {
 	RefreshTokensCollection := connection.Collection("refreshTokens")
 	var result []RefreshToken
@@ -33,7 +33,7 @@ func DoesRefreshTokenAlreadyExists(token string, connection *mongo.Database) (bo
 	return true, nil
 }
 
-//generate a new token pair from the userID (matricola)
+// generate a new token pair from the userID (matricola)
 func GenerateTokenPair(userID int, connection *mongo.Database) (string, string, error) {
 	//generate the access token
 	jwtAccessToken, err := NewSignedToken(NewCustomClaims(userID))
@@ -67,7 +67,7 @@ func GenerateTokenPair(userID int, connection *mongo.Database) (string, string, 
 	return jwtAccessToken, token.Token, nil
 }
 
-//check if the refresh token is expired
+// check if the refresh token is expired
 func IsRefreshTokenExpired(token string, connection *mongo.Database) (bool, error) {
 	RefreshTokensCollection := connection.Collection("refreshTokens")
 
@@ -86,7 +86,7 @@ func IsRefreshTokenExpired(token string, connection *mongo.Database) (bool, erro
 	return result.Expiration.Before(time.Now()), nil
 }
 
-//get the student struct from the access token (can't use the refresh token)
+// get the student struct from the access token (can't use the refresh token)
 func GetUserFromAccessToken(accessToken string, connection *mongo.Database) (Student, error) {
 	claims, err := ParseToken(accessToken)
 	if err != nil {
@@ -99,8 +99,8 @@ func GetUserFromAccessToken(accessToken string, connection *mongo.Database) (Stu
 	return user, err
 }
 
-//generate a new token pair given a valid refresh token
-//the refresh token allows us to get the userID that will be used to generat a new token pair
+// generate a new token pair given a valid refresh token
+// the refresh token allows us to get the userID that will be used to generat a new token pair
 func GenerateNewTokenPairFromRefreshToken(refreshToken string, connection *mongo.Database) (string, string, error) {
 	//check if the refresh token is expired
 	isExpired, err := IsRefreshTokenExpired(refreshToken, connection)

@@ -49,15 +49,15 @@ func (h Handler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 
 	//check if it's the second phase of the oauth
 	if okCode && okState {
-        http.SetCookie(w, &http.Cookie{
-            Name:    "ipaas-session",
-            Value:   "",
-            Path:    "/",
-            Expires: time.Unix(0, 0),
-        })
+		http.SetCookie(w, &http.Cookie{
+			Name:    "ipaas-session",
+			Value:   "",
+			Path:    "/",
+			Expires: time.Unix(0, 0),
+		})
 		//check if the state is valid (rsa encryption)
 		valid, redirectUri, state, err := CheckState(UrlState[0])
-        if err != nil {
+		if err != nil {
 			resp.Error(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -609,54 +609,54 @@ func (h Handler) MockLoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-    refreshToken, err := r.Cookie("ipaas-refresh-token")
-    if err != nil {
-        if err == http.ErrNoCookie {
-            if _, err = r.Cookie("ipaas-access-token"); err != http.ErrNoCookie {
-                http.SetCookie(w, &http.Cookie{
-                    Name:    "ipaas-access-token",
-                    Path:    "/",
-                    Value:   "",
-                    Expires: time.Unix(0, 0),
-                })
-            }
-            http.Redirect(w, r, "/login", http.StatusFound)
-            return
-        } else {
-            resp.Error(w, http.StatusInternalServerError, err.Error())
-            return
-        }
-    }
+	refreshToken, err := r.Cookie("ipaas-refresh-token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			if _, err = r.Cookie("ipaas-access-token"); err != http.ErrNoCookie {
+				http.SetCookie(w, &http.Cookie{
+					Name:    "ipaas-access-token",
+					Path:    "/",
+					Value:   "",
+					Expires: time.Unix(0, 0),
+				})
+			}
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		} else {
+			resp.Error(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
 
-    db, err := connectToDB()
-    if err != nil {
-        resp.Error(w, http.StatusInternalServerError, err.Error())
-        return
-    }
-    defer db.Client().Disconnect(context.TODO())
+	db, err := connectToDB()
+	if err != nil {
+		resp.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer db.Client().Disconnect(context.TODO())
 
-    refreshTokenCollection := db.Collection("refreshTokens")
-    _, err = refreshTokenCollection.DeleteOne(context.TODO(), bson.D{{"token", refreshToken.Value}})
-    if err != nil {
-        resp.Error(w, http.StatusInternalServerError, err.Error())
-        return
-    }
+	refreshTokenCollection := db.Collection("refreshTokens")
+	_, err = refreshTokenCollection.DeleteOne(context.TODO(), bson.D{{"token", refreshToken.Value}})
+	if err != nil {
+		resp.Error(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
-    http.SetCookie(w, &http.Cookie{
-        Name: "ipaas-refresh-token",
-        Value: "",
-        Path: "/",
-        Expires: time.Unix(0, 0),
-    })
+	http.SetCookie(w, &http.Cookie{
+		Name:    "ipaas-refresh-token",
+		Value:   "",
+		Path:    "/",
+		Expires: time.Unix(0, 0),
+	})
 
-    http.SetCookie(w, &http.Cookie{
-        Name: "ipaas-access-token",
-        Value: "",
-        Path: "/",
-        Expires: time.Unix(0, 0),
-    })
+	http.SetCookie(w, &http.Cookie{
+		Name:    "ipaas-access-token",
+		Value:   "",
+		Path:    "/",
+		Expires: time.Unix(0, 0),
+	})
 
-    http.Redirect(w, r, "/login", http.StatusFound)
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 //!===========================PAGES HANDLERS
