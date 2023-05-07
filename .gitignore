@@ -1,5 +1,16 @@
+#enviroments
 .env
+
+#docker & docker compose
 ipaas-db-dump/
+_volume
+
+#npm
+node_modules/
+package*
+
+#ipaas
 tmp/
-rabbitmq/
+
+#...
 .idea/
