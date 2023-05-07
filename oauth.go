@@ -12,35 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ipaas-org/ipaas-backend/model"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-// struct used to get the user from paleoid
-type Payload struct {
-	GrantType    string `json:"grant_type"`    //will always be "authorization_code"
-	Code         string `json:"code"`          //the code returned by the oauth server
-	RedirectUri  string `json:"redirect_uri"`  //the redirect uri (saved in env variable)
-	ClientID     string `json:"client_id"`     //the client id (saved in env variable)
-	ClientSecret string `json:"client_secret"` //the client secret (saved in env variable)
-}
-
-type State struct {
-	Id             primitive.ObjectID `bson:"_id"`
-	State          string             `json:"state"`
-	Issued         time.Time          `bson:"issDate"`
-	ExpirationDate time.Time          `bson:"expDate"`
-	RedirectUri    string             `bson:"redirectUri"`
-}
-
-type Polling struct {
-	DBId            primitive.ObjectID `bson:"_id"`
-	RandomId        string             `bson:"id"`
-	IssDate         time.Time          `bson:"issDate"`
-	ExpDate         time.Time          `bson:"expDate"`
-	LoginSuccessful bool               `bson:"loginSuccessful"`
-}
 
 // TODO: should separate the generation of the polling id from this function and put it in a separate function
 // returns a unique signed base64url encoded state string that lasts 5 minutes (saved on the database)
@@ -137,7 +112,7 @@ func CheckState(cypher string) (valid bool, redirectUri string, state string, er
 	fmt.Println(state)
 
 	stateCollection := db.Collection("oauthStates")
-	var s State
+	var s model.State
 	err = stateCollection.FindOne(context.TODO(), bson.M{"state": state}).Decode(&s)
 	fmt.Println(s)
 	if err != nil {
@@ -163,7 +138,7 @@ func CheckState(cypher string) (valid bool, redirectUri string, state string, er
 }
 
 func GetPollingIDFromState(state string, connection *mongo.Database) (pollingID string, found bool, err error) {
-	var polling Polling
+	var polling model.Polling
 	pollingCollection := connection.Collection("pollingIDs")
 	err = pollingCollection.FindOne(context.TODO(), bson.M{"state": state}).Decode(&polling)
 	if err != nil {
@@ -183,7 +158,7 @@ func UpdatePollingID(randomID, accessToken, refreshToken string) error {
 
 	pollingCollection := db.Collection("pollingIDs")
 
-	var found Polling
+	var found model.Polling
 	err = pollingCollection.FindOne(context.TODO(), bson.M{"id": randomID}).Decode(&found)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -193,7 +168,11 @@ func UpdatePollingID(randomID, accessToken, refreshToken string) error {
 		}
 	}
 
-	update := bson.D{{"$set", bson.D{{"accessToken", accessToken}, {"refreshToken", refreshToken}, {"loginSuccessful", true}}}}
+	update := bson.D{{"$set", bson.D{
+		{"accessToken", accessToken},
+		{"refreshToken", refreshToken},
+		{"loginSuccessful", true},
+	}}}
 	_, err = pollingCollection.UpdateOne(context.TODO(), bson.M{"id": randomID}, update)
 	return err
 }
@@ -204,9 +183,9 @@ func UpdatePollingID(randomID, accessToken, refreshToken string) error {
 func GetPaleoIDAccessToken(code string) (string, error) {
 	//do post request to url with the code and the env variables
 	//(they are envs because they are private and saved in the .env)
-	url := "https://id.paleo.bg.it/oauth/token"
-	payload := Payload{
-		GrantType:    "authorization_code",
+	url := model.BaseUrlPaleoID + "oauth/token"
+	payload := model.Payload{
+		GrantType:    model.GrantTypeAuthorizationCode,
 		Code:         code,
 		RedirectUri:  os.Getenv("REDIRECT_URI"),
 		ClientID:     os.Getenv("OAUTH_ID"),
@@ -248,13 +227,13 @@ func GetPaleoIDAccessToken(code string) (string, error) {
 // this section is documented on the official paleoid documentation of
 // how to retireve the student data from the access token
 // https://paleoid.stoplight.io/docs/api/b3A6NDIwMTA1Mw-ottieni-le-informazioni-dell-utente
-func GetStudentFromPaleoIDAccessToken(accessToken string) (Student, error) {
-	url := "https://id.paleo.bg.it/api/v2/user"
+func GetStudentFromPaleoIDAccessToken(accessToken string) (model.Student, error) {
+	url := model.BaseUrlPaleoID + "api/v2/user"
 
 	//make a get request to url with the access token as Bearer token
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return Student{}, err
+		return model.Student{}, err
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -263,17 +242,17 @@ func GetStudentFromPaleoIDAccessToken(accessToken string) (Student, error) {
 	//make the request
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return Student{}, err
+		return model.Student{}, err
 	}
 
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return Student{}, err
+		return model.Student{}, err
 	}
 
 	//parse the body into a student struct (from the json response)
-	var student Student
+	var student model.Student
 	student.IsMock = false
 	err = json.Unmarshal(body, &student)
 	return student, err

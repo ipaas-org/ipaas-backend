@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/ipaas-org/ipaas-backend/model"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -35,7 +36,7 @@ func CheckExpiries(execute chan string) {
 				log.Printf("[ERROR] Error getting the oauth states: %v\n", err)
 				continue
 			}
-			var states []State
+			var states []model.State
 			err = stateCur.All(context.TODO(), &states)
 			if err != nil {
 				log.Println("[ERROR] Error getting all the states")
@@ -60,7 +61,7 @@ func CheckExpiries(execute chan string) {
 				log.Printf("[ERROR] Error getting the refresh tokens: %v\n", err)
 				continue
 			}
-			var refreshTokens []RefreshToken
+			var refreshTokens []model.RefreshToken
 			err = refreshTokensCur.All(context.TODO(), &refreshTokens)
 			if err != nil {
 				log.Println("[ERROR] Error getting all the refresh tokens")
@@ -117,7 +118,7 @@ func CheckExpiries(execute chan string) {
 				log.Printf("[ERROR] Error getting the polling IDs: %v\n", err)
 				continue
 			}
-			var pollingIDs []Polling
+			var pollingIDs []model.Polling
 			err = pollingIDsCur.All(context.Background(), &pollingIDs)
 			if err != nil {
 				log.Printf("[ERROR] Error getting the polling IDs: %v\n", err)
@@ -142,6 +143,7 @@ func CheckExpiries(execute chan string) {
 	}
 }
 
+// TODO: need to use a time.ticker with a select instead
 // RunExecutor runs CheckExpiries function every given interval sending the event on the channel
 func RunExecutor(oauthStateCleaningInterval, refreshTokensCleaningInterval, usersCleaningInterval, pollingIDsCleaningInterval time.Duration, execute chan string) {
 	go func() {

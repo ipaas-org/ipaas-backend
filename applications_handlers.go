@@ -11,7 +11,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/gorilla/mux"
-	resp "github.com/vano2903/ipaas/responser"
+	"github.com/ipaas-org/ipaas-backend/model"
+	resp "github.com/ipaas-org/ipaas-backend/responser"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -40,7 +41,7 @@ func (h Handler) NewApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//read post body
-	var appPost AppPost
+	var appPost model.AppPost
 	err = json.NewDecoder(r.Body).Decode(&appPost)
 	if err != nil {
 		resp.Errorf(w, http.StatusBadRequest, "error decoding the json: %v", err.Error())
@@ -122,7 +123,7 @@ func (h Handler) NewApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("status:", status)
 
-	var app Application
+	var app model.Application
 	app.ID = primitive.NewObjectID()
 	app.ContainerID = id
 	app.Status = status
@@ -173,7 +174,7 @@ func (h Handler) DeleteApplicationHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	applicationCollection := conn.Collection("applications")
-	var app Application
+	var app model.Application
 	err = applicationCollection.FindOne(context.Background(), bson.M{"containerID": containerID}).Decode(&app)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -233,7 +234,7 @@ func (h Handler) UpdateApplicationHandler(w http.ResponseWriter, r *http.Request
 
 	//get the application from the database and check if it's owned by the student
 	applicationCollection := conn.Collection("applications")
-	var app Application
+	var app model.Application
 	err = applicationCollection.FindOne(context.Background(), bson.M{"containerID": containerID}).Decode(&app)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -385,7 +386,7 @@ func (h Handler) GetAllApplicationsOfStudentPrivate(w http.ResponseWriter, r *ht
 	applicationCollection := conn.Collection("applications")
 
 	//get the applications from the database
-	var apps []Application
+	var apps []model.Application
 	if typeOfApp == "all" {
 		cur, err := applicationCollection.Find(context.TODO(), bson.M{"studentID": student.ID})
 		if err != nil {
@@ -410,8 +411,8 @@ func (h Handler) GetAllApplicationsOfStudentPrivate(w http.ResponseWriter, r *ht
 		}
 	}
 
-	//parse the rows into a []Application and return it
-	var applications []Application
+	//parse the rows into a []model.Application and return it
+	var applications []model.Application
 	var errors []string
 	for _, app := range apps {
 		if app.GithubRepo != "" {
@@ -454,7 +455,7 @@ func (h Handler) GetAllApplicationsOfStudentPublic(w http.ResponseWriter, r *htt
 	}
 	defer conn.Client().Disconnect(context.Background())
 
-	var apps []Application
+	var apps []model.Application
 	cur, err := conn.Collection("applications").Find(context.TODO(), bson.M{"studentID": studentID, "type": "web", "isPublic": true})
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -501,7 +502,7 @@ func (h Handler) PublishApplicationHandler(w http.ResponseWriter, r *http.Reques
 		resp.Errorf(w, http.StatusInternalServerError, "error getting the application: %v", err.Error())
 		return
 	}
-	resp.Success(w, http.StatusOK, "Application published")
+	resp.Success(w, http.StatusOK, "model.Application published")
 }
 
 func (h Handler) RevokeApplicationHandler(w http.ResponseWriter, r *http.Request) {
@@ -532,5 +533,5 @@ func (h Handler) RevokeApplicationHandler(w http.ResponseWriter, r *http.Request
 		resp.Errorf(w, http.StatusInternalServerError, "error getting the application: %v", err.Error())
 		return
 	}
-	resp.Success(w, http.StatusOK, "Application is now private")
+	resp.Success(w, http.StatusOK, "model.Application is now private")
 }

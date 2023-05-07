@@ -5,22 +5,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ipaas-org/ipaas-backend/model"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-type RefreshToken struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty"`
-	UserID     int                `bson:"userID"`
-	Token      string             `bson:"token"`
-	Expiration time.Time          `bson:"expiration"`
-}
 
 // check if a refresh token is already in the database
 func DoesRefreshTokenAlreadyExists(token string, connection *mongo.Database) (bool, error) {
 	RefreshTokensCollection := connection.Collection("refreshTokens")
-	var result []RefreshToken
+	var result []model.RefreshToken
 	err := RefreshTokensCollection.
 		FindOne(context.TODO(), bson.M{"token": token}).
 		Decode(&result)
@@ -41,7 +34,7 @@ func GenerateTokenPair(userID int, connection *mongo.Database) (string, string, 
 		return "", "", err
 	}
 
-	token := RefreshToken{}
+	token := model.RefreshToken{}
 	token.UserID = userID
 	//generate a random string for the refresh token
 	//and set the expiration time to 1 week
@@ -71,7 +64,7 @@ func GenerateTokenPair(userID int, connection *mongo.Database) (string, string, 
 func IsRefreshTokenExpired(token string, connection *mongo.Database) (bool, error) {
 	RefreshTokensCollection := connection.Collection("refreshTokens")
 
-	var result RefreshToken
+	var result model.RefreshToken
 	err := RefreshTokensCollection.
 		FindOne(context.TODO(), bson.M{"token": token}).
 		Decode(&result)
@@ -87,12 +80,12 @@ func IsRefreshTokenExpired(token string, connection *mongo.Database) (bool, erro
 }
 
 // get the student struct from the access token (can't use the refresh token)
-func GetUserFromAccessToken(accessToken string, connection *mongo.Database) (Student, error) {
+func GetUserFromAccessToken(accessToken string, connection *mongo.Database) (model.Student, error) {
 	claims, err := ParseToken(accessToken)
 	if err != nil {
-		return Student{}, err
+		return model.Student{}, err
 	}
-	var user Student
+	var user model.Student
 	err = connection.Collection("users").
 		FindOne(context.TODO(), bson.M{"userID": claims.UserID}).
 		Decode(&user)
@@ -113,7 +106,7 @@ func GenerateNewTokenPairFromRefreshToken(refreshToken string, connection *mongo
 	}
 
 	//get the user id from the refresh token
-	var token RefreshToken
+	var token model.RefreshToken
 	tokensCollection := connection.Collection("refreshTokens")
 	err = tokensCollection.
 		FindOne(context.TODO(), bson.M{"token": refreshToken}).

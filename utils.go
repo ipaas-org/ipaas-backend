@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/tidwall/gjson"
 	"io"
 	"math/rand"
 	"net"
@@ -15,7 +13,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/tidwall/gjson"
+
 	"github.com/go-git/go-git/v5"
+	"github.com/ipaas-org/ipaas-backend/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -35,17 +37,8 @@ type Util struct {
 	ctx context.Context
 }
 
-type GithubCommit struct {
-	SHA    string               `json:"sha"`
-	Commit GithubCommitInternal `json:"commit"`
-}
-
-type GithubCommitInternal struct {
-	Message string `json:"message"`
-}
-
 // get the student from the database given a valid access token (will be retrived from cookies)
-func (u Util) GetUserFromCookie(r *http.Request, connection *mongo.Database) (Student, error) {
+func (u Util) GetUserFromCookie(r *http.Request, connection *mongo.Database) (model.Student, error) {
 	//search the access token in the cookies
 	var acc string
 	for _, cookie := range r.Cookies() {
@@ -57,13 +50,13 @@ func (u Util) GetUserFromCookie(r *http.Request, connection *mongo.Database) (St
 
 	//check if it's not empty
 	if acc == "" {
-		return Student{}, fmt.Errorf("no access token found")
+		return model.Student{}, fmt.Errorf("no access token found")
 	}
 
 	//get the student from the database, it will automatically check if the access token is valid
 	s, err := GetUserFromAccessToken(acc, connection)
 	if err != nil {
-		return Student{}, err
+		return model.Student{}, err
 	}
 
 	return s, nil
@@ -252,7 +245,7 @@ func (u Util) HasLastCommitChanged(commit, url, branch string) (bool, error) {
 
 	//if there is an error return the message
 	if resp.StatusCode != 200 {
-		var Error GithubCommitInternal
+		var Error model.GithubCommitInternal
 		err = json.Unmarshal(body, &Error)
 		if err != nil {
 			return false, err
@@ -260,7 +253,7 @@ func (u Util) HasLastCommitChanged(commit, url, branch string) (bool, error) {
 		return false, fmt.Errorf("application: %s/%s returned %d as status code, message: %s", owner, name, resp.StatusCode, Error.Message)
 	}
 
-	var RepoCommits []GithubCommit
+	var RepoCommits []model.GithubCommit
 	err = json.Unmarshal(body, &RepoCommits)
 	if err != nil {
 		return false, err

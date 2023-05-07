@@ -6,29 +6,18 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
+	"github.com/ipaas-org/ipaas-backend/model"
 )
 
-type dbContainerConfig struct {
-	name  string
-	image string
-	port  string
-}
 
-type dbPost struct {
-	DbDescription     string `json:"dbDescription,omitemtpy"`
-	DbName            string `json:"databaseName"`
-	DbType            string `json:"databaseType"`
-	DbVersion         string `json:"databaseVersion"`
-	DbTableCollection string `json:"databaseTable"`
-}
 
 // TODO: ADD DB NAME
 // create a new database container given the db type, image, port, enviroment variables and volume
 // it returns the container id and an error
-func (c ContainerController) CreateNewDB(conf dbContainerConfig, env []string) (string, error) {
+func (c ContainerController) CreateNewDB(conf model.DbContainerConfig, env []string) (string, error) {
 	//container config (image and environment variables)
 	config := &container.Config{
-		Image: conf.image,
+		Image: conf.Image,
 		Env:   env,
 	}
 	//host config
@@ -41,7 +30,7 @@ func (c ContainerController) CreateNewDB(conf dbContainerConfig, env []string) (
 
 	//set the port for the container (internal one)
 
-	containerPort, err := nat.NewPort("tcp", conf.port)
+	containerPort, err := nat.NewPort("tcp", conf.Port)
 	fmt.Println("container port" + containerPort)
 	if err != nil {
 		return "", err

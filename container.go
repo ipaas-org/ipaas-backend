@@ -4,13 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/docker/docker/pkg/archive"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/pkg/archive"
+	"github.com/ipaas-org/ipaas-backend/model"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -22,13 +24,13 @@ import (
 type ContainerController struct {
 	ctx                 context.Context //context for the docker client
 	cli                 *client.Client  //docker client
-	dbContainersConfigs map[string]dbContainerConfig
+	dbContainersConfigs map[string]model.DbContainerConfig
 }
 
 // CreateImage will create an image given the creator id, port to expose (in the docker),
 // name of the app, path for the tmp file, lang for the dockerfile and envs, if no error occurs
 // the function will return the image name and image id
-func (c ContainerController) CreateImage(creatorID, port int, name, branch, path, language string, envs []Env) (string, string, error) {
+func (c ContainerController) CreateImage(creatorID, port int, name, branch, path, language string, envs []model.Env) (string, string, error) {
 	//check if the language is supported
 	var found bool
 	for _, l := range Langs {
@@ -284,21 +286,21 @@ func NewContainerController() (*ContainerController, error) {
 		return nil, err
 	}
 
-	c.dbContainersConfigs = map[string]dbContainerConfig{
+	c.dbContainersConfigs = map[string]model.DbContainerConfig{
 		"mysql": {
-			name:  "mysql",
-			image: "mysql:8.0.28-oracle",
-			port:  "3306",
+			Name:  "mysql",
+			Image: "mysql:8.0.28-oracle",
+			Port:  "3306",
 		},
 		"mariadb": {
-			name:  "mariadb",
-			image: "mariadb:10.8.2-rc-focal",
-			port:  "3306",
+			Name:  "mariadb",
+			Image: "mariadb:10.8.2-rc-focal",
+			Port:  "3306",
 		},
 		"mongodb": {
-			name:  "mongodb",
-			image: "mongo:5.0.6",
-			port:  "27017",
+			Name:  "mongodb",
+			Image: "mongo:5.0.6",
+			Port:  "27017",
 		},
 	}
 

@@ -18,7 +18,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	resp "github.com/vano2903/ipaas/responser"
+	"github.com/ipaas-org/ipaas-backend/model"
+	resp "github.com/ipaas-org/ipaas-backend/responser"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -149,7 +150,7 @@ func (h Handler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 
 	//check if a server generated state is stored in the session
 	if session.Values["state"] != nil {
-		oauthUrl := fmt.Sprintf("https://id.paleo.bg.it/oauth/authorize?client_id=%s&response_type=code&state=%s&redirect_uri=%s", os.Getenv("OAUTH_ID"), session.Values["state"], os.Getenv("REDIRECT_URI"))
+		oauthUrl := fmt.Sprintf(model.BaseUrlPaleoID+"oauth/authorize?client_id=%s&response_type=code&state=%s&redirect_uri=%s", os.Getenv("OAUTH_ID"), session.Values["state"], os.Getenv("REDIRECT_URI"))
 		// http.Redirect(w, r, oauthUrl, http.StatusFound)
 		resp.Success(w, http.StatusOK, oauthUrl)
 		return
@@ -180,7 +181,7 @@ func (h Handler) OauthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oauthUrl := fmt.Sprintf("https://id.paleo.bg.it/oauth/authorize?client_id=%s&response_type=code&state=%s&redirect_uri=%s", os.Getenv("OAUTH_ID"), state, os.Getenv("REDIRECT_URI"))
+	oauthUrl := fmt.Sprintf(model.BaseUrlPaleoID+"oauth/authorize?client_id=%s&response_type=code&state=%s&redirect_uri=%s", os.Getenv("OAUTH_ID"), state, os.Getenv("REDIRECT_URI"))
 
 	if pollingIDOK {
 		response := map[string]string{"oauthUrl": oauthUrl, "randomID": randomID}
@@ -452,7 +453,7 @@ func (h Handler) MockRegisterUserHandler(w http.ResponseWriter, r *http.Request)
 	}(db.Client(), context.TODO())
 
 	//check if the user already exists
-	var student Student
+	var student model.Student
 	err = db.Collection("users").FindOne(context.TODO(), bson.M{"userID": userIDInt}).Decode(student)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -571,7 +572,7 @@ func (h Handler) MockLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//check if the user already exists
-	var student Student
+	var student model.Student
 	err = db.Collection("users").FindOne(context.TODO(), bson.M{"isMock": true, "name": bodyStruct.Name, "password": string(hashedPassword)}).Decode(student)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -658,8 +659,6 @@ func (h Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
-
-//!===========================PAGES HANDLERS
 
 // constructor
 func NewHandler() (*Handler, error) {

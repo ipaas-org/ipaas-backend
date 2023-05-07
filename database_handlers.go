@@ -8,7 +8,8 @@ import (
 	"os"
 	"time"
 
-	resp "github.com/vano2903/ipaas/responser"
+	"github.com/ipaas-org/ipaas-backend/model"
+	resp "github.com/ipaas-org/ipaas-backend/responser"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -36,7 +37,7 @@ func (h Handler) NewDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//read post body
-	var dbPost dbPost
+	var dbPost model.DbPost
 	err = json.NewDecoder(r.Body).Decode(&dbPost)
 	if err != nil {
 		resp.Errorf(w, http.StatusBadRequest, "error decoding the json: %v", err.Error())
@@ -80,13 +81,13 @@ func (h Handler) NewDBHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//get the external port
-	port, err := h.cc.GetContainerExternalPort(id, h.cc.dbContainersConfigs[dbPost.DbType].port)
+	port, err := h.cc.GetContainerExternalPort(id, h.cc.dbContainersConfigs[dbPost.DbType].Port)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error getting the external port: %v", err.Error())
 		return
 	}
 
-	var Db Application
+	var Db model.Application
 	Db.ID = primitive.NewObjectID()
 	Db.ContainerID = id
 	Db.Status = "up"
@@ -94,7 +95,7 @@ func (h Handler) NewDBHandler(w http.ResponseWriter, r *http.Request) {
 	Db.Type = "database"
 	Db.Name = fmt.Sprintf("%d:%s/%s", student.ID, dbPost.DbType, dbPost.DbName)
 	Db.Description = dbPost.DbDescription
-	Db.Port = h.cc.dbContainersConfigs[dbPost.DbType].port
+	Db.Port = h.cc.dbContainersConfigs[dbPost.DbType].Port
 	Db.ExternalPort = port
 	Db.CreatedAt = time.Now()
 	// Db.Envs =
