@@ -12,8 +12,8 @@ import (
 )
 
 // get student struct from the id (matricola)
-func GetStudentFromID(userID int, connection *mongo.Database) (model.Student, error) {
-	var student model.Student
+func GetStudentFromID(userID int, connection *mongo.Database) (model.User, error) {
+	var student model.User
 	err := connection.Collection("users").
 		FindOne(context.Background(), bson.M{"userID": userID}).
 		Decode(&student)
@@ -26,7 +26,7 @@ func GetStudentFromID(userID int, connection *mongo.Database) (model.Student, er
 
 // check if the userUID is saved in the db
 func IsUserRegistered(userID int, connection *mongo.Database) (bool, error) {
-	var user model.Student
+	var user model.User
 	err := connection.Collection("users").
 		FindOne(context.Background(), bson.M{"userID": userID}).
 		Decode(&user)
@@ -44,7 +44,7 @@ func IsUserRegistered(userID int, connection *mongo.Database) (bool, error) {
 }
 
 // adds the student to the db (it's a pointer because here we generate the pfp)
-func AddStudent(student *model.Student, connection *mongo.Database) error {
+func AddStudent(student *model.User, connection *mongo.Database) error {
 	//check if it's already registered
 	exists, err := IsUserRegistered(student.ID, connection)
 	if err != nil {

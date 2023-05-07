@@ -227,13 +227,13 @@ func GetPaleoIDAccessToken(code string) (string, error) {
 // this section is documented on the official paleoid documentation of
 // how to retireve the student data from the access token
 // https://paleoid.stoplight.io/docs/api/b3A6NDIwMTA1Mw-ottieni-le-informazioni-dell-utente
-func GetStudentFromPaleoIDAccessToken(accessToken string) (model.Student, error) {
+func GetStudentFromPaleoIDAccessToken(accessToken string) (model.User, error) {
 	url := model.BaseUrlPaleoID + "api/v2/user"
 
 	//make a get request to url with the access token as Bearer token
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return model.Student{}, err
+		return model.User{}, err
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -242,17 +242,17 @@ func GetStudentFromPaleoIDAccessToken(accessToken string) (model.Student, error)
 	//make the request
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return model.Student{}, err
+		return model.User{}, err
 	}
 
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return model.Student{}, err
+		return model.User{}, err
 	}
 
 	//parse the body into a student struct (from the json response)
-	var student model.Student
+	var student model.User
 	student.IsMock = false
 	err = json.Unmarshal(body, &student)
 	return student, err

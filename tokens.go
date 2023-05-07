@@ -80,12 +80,12 @@ func IsRefreshTokenExpired(token string, connection *mongo.Database) (bool, erro
 }
 
 // get the student struct from the access token (can't use the refresh token)
-func GetUserFromAccessToken(accessToken string, connection *mongo.Database) (model.Student, error) {
+func GetUserFromAccessToken(accessToken string, connection *mongo.Database) (model.User, error) {
 	claims, err := ParseToken(accessToken)
 	if err != nil {
-		return model.Student{}, err
+		return model.User{}, err
 	}
-	var user model.Student
+	var user model.User
 	err = connection.Collection("users").
 		FindOne(context.TODO(), bson.M{"userID": claims.UserID}).
 		Decode(&user)

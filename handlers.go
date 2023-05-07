@@ -453,7 +453,7 @@ func (h Handler) MockRegisterUserHandler(w http.ResponseWriter, r *http.Request)
 	}(db.Client(), context.TODO())
 
 	//check if the user already exists
-	var student model.Student
+	var student model.User
 	err = db.Collection("users").FindOne(context.TODO(), bson.M{"userID": userIDInt}).Decode(student)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {
@@ -572,7 +572,7 @@ func (h Handler) MockLoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//check if the user already exists
-	var student model.Student
+	var student model.User
 	err = db.Collection("users").FindOne(context.TODO(), bson.M{"isMock": true, "name": bodyStruct.Name, "password": string(hashedPassword)}).Decode(student)
 	if err != nil {
 		if err != mongo.ErrNoDocuments {

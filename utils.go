@@ -38,7 +38,7 @@ type Util struct {
 }
 
 // get the student from the database given a valid access token (will be retrived from cookies)
-func (u Util) GetUserFromCookie(r *http.Request, connection *mongo.Database) (model.Student, error) {
+func (u Util) GetUserFromCookie(r *http.Request, connection *mongo.Database) (model.User, error) {
 	//search the access token in the cookies
 	var acc string
 	for _, cookie := range r.Cookies() {
@@ -50,13 +50,13 @@ func (u Util) GetUserFromCookie(r *http.Request, connection *mongo.Database) (mo
 
 	//check if it's not empty
 	if acc == "" {
-		return model.Student{}, fmt.Errorf("no access token found")
+		return model.User{}, fmt.Errorf("no access token found")
 	}
 
 	//get the student from the database, it will automatically check if the access token is valid
 	s, err := GetUserFromAccessToken(acc, connection)
 	if err != nil {
-		return model.Student{}, err
+		return model.User{}, err
 	}
 
 	return s, nil

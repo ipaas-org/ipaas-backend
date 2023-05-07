@@ -2,7 +2,7 @@ package model
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
-type Student struct {
+type User struct {
 	ID            primitive.ObjectID `bson:"_id" json:"_"`
 	StudentNumber int                `bson:"studentID" json:"matricola"` //id of the student (teachers will use the same, but it's 6 digit long instead of 5)
 	Name          string             `bson:"name" json:"nome"`
