@@ -9,19 +9,38 @@ type (
 	//This interface has the methods declarations for the
 	//repo components.
 	UserRepoer interface {
-		GetByID(id int) (*model.User, error)
+		GetByID(id string) (*model.User, error)
 		GetByStudentID(studentID int) (*model.User, error)
-		GetByEmail(email string) (*model.User, error)
-		Insert(u *model.User) (id int, err error)
+		Insert(u *model.User) (id string, err error)
 		Update(u *model.User) error
-		Delete(id int) error
+		DeleteById(id string) error
+		DeleteByStudentID(studentID int) error
 
-		GetAll() []*model.User
+		GetBy(props map[string]interface{}) []*model.User
 	}
 
 	TokenRepoer interface {
-		Insert(t *model.RefreshToken) (id int, err error)
 		GetByToken(token string) (*model.RefreshToken, error)
+		Insert(t *model.RefreshToken) (id string, err error)
 		Delete(token string) error
+
+		GetBy(props map[string]interface{}) []*model.RefreshToken
+	}
+
+	StateRepoer interface {
+		GetByState(state string) (*model.State, error)
+		Insert(s *model.State) (id string, err error)
+		Delete(state string) error
+
+		GetBy(props map[string]interface{}) []*model.State
+	}
+
+	ApplicationRepoer interface {
+		Insert(a *model.Application) (id string, err error)
+		GetByContainerID(containerID string) (*model.Application, error)
+		Update(a *model.Application) error
+		Delete(containerID string) error
+
+		GetBy(props map[string]interface{}) []*model.Application
 	}
 )
