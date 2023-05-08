@@ -1,4 +1,4 @@
-module github.com/vano2903/ipaas
+module github.com/ipaas-org/ipaas-backend
 
 go 1.17
 

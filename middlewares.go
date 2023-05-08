@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	resp "github.com/vano2903/ipaas/responser"
+	resp "github.com/ipaas-org/ipaas-backend/responser"
 )
 
 // check if the user has a valid access Token
