@@ -16,6 +16,7 @@ run: fmt lint ### format, lint, check module and run go code
 
 fmt: ### format go mod and code
 	go mod tidy 
+	go mod download -x
 	go fmt .
 .PHONY: fmt
 
