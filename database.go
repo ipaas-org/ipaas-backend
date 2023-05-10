@@ -9,8 +9,6 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 )
 
-
-
 // TODO: ADD DB NAME
 // create a new database container given the db type, image, port, enviroment variables and volume
 // it returns the container id and an error
