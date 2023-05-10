@@ -1,12 +1,98 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
-	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
+	"github.com/ipaas-org/ipaas-backend/config"
+	"github.com/ipaas-org/ipaas-backend/controller"
+	"github.com/ipaas-org/ipaas-backend/pkg/logger"
+	"github.com/ipaas-org/ipaas-backend/repo/mock"
+	mongoRepo "github.com/ipaas-org/ipaas-backend/repo/mongo"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func main() {
+	conf, err := config.NewConfig()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	l := logger.NewLogger(conf.Log.Level, conf.Log.Type)
+	l.Debug("initizalized logger")
+
+	c := controller.NewBuilderController(l)
+	l.Debugf("conf: %+v\n", conf)
+
+	switch conf.Database.Driver {
+	case "mock":
+		l.Info("using mock database")
+		c.SetUserRepo(mock.NewUserRepoer())
+		c.SetTokenRepo(mock.NewTokenRepoer())
+		c.SetStateRepo(mock.NewStateRepoer())
+		c.SetApplicationRepo(mock.NewApplicationRepoer())
+
+	case "mongo":
+		l.Info("using mongo database")
+
+		l.Debug("connecting to database")
+		ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+		client, err := mongo.Connect(ctx, options.Client().ApplyURI(conf.Database.URI))
+		if err != nil {
+			l.Fatalf("error connecting to database: %s", err.Error())
+		}
+		cancel()
+
+		l.Debug("connecting to user collection")
+		userCollection := client.Database("ipaas").Collection("user")
+		userRepo := mongoRepo.NewUserRepoer(userCollection)
+		c.SetUserRepo(userRepo)
+
+		l.Debug("connecting to token collection")
+		tokenCollection := client.Database("ipaas").Collection("token")
+		tokenRepo := mongoRepo.NewTokenRepoer(tokenCollection)
+		c.SetTokenRepo(tokenRepo)
+
+		l.Debug("connecting to state collection")
+		stateCollection := client.Database("ipaas").Collection("state")
+		stateRepo := mongoRepo.NewStateRepoer(stateCollection)
+		c.SetStateRepo(stateRepo)
+
+		l.Debug("connecting to application collection")
+		applicationCollection := client.Database("ipaas").Collection("application")
+		applicationRepo := mongoRepo.NewApplicationRepoer(applicationCollection)
+		c.SetApplicationRepo(applicationRepo)
+	}
+
+	rmq := rabbitmq.NewRabbitMQ(conf.RMQ.URI, conf.RMQ.RequestQueue, conf.RMQ.ResponseQueue, c, l)
+
+	if err := rmq.Connect(); err != nil {
+		l.Fatalf("error connecting to rabbitmq: %s", err.Error())
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	// Waiting signal
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		rmq.Consume(ctx)
+	}()
+
+	select {
+	case s := <-interrupt:
+		l.Info("app - Run - signal: " + s.String())
+		cancel()
+	case err = <-rmq.Error:
+		l.Error(fmt.Errorf("rabbitmq: %w", err))
+	}
+}
 
 /*
 !PAGES ENDPOINTS:
@@ -48,7 +134,6 @@ import (
 *api endpoints for applications:
 /api/app/new -> create a new application
 /api/app/update/{containerID} -> update an application if the repo is changed
-*/
 
 func main() {
 	mainRouter := mux.NewRouter()
@@ -143,3 +228,4 @@ func main() {
 	log.Println("starting the server on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", handlers.CORS(originsOk, headersOk, methodsOk)(mainRouter)))
 }
+*/
