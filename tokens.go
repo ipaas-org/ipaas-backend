@@ -35,7 +35,7 @@ func GenerateTokenPair(userID int, connection *mongo.Database) (string, string, 
 	}
 
 	token := model.RefreshToken{}
-	token.UserID = userID
+	token.UserEmail = userID
 	//generate a random string for the refresh token
 	//and set the expiration time to 1 week
 	for {
@@ -124,5 +124,5 @@ func GenerateNewTokenPairFromRefreshToken(refreshToken string, connection *mongo
 	}
 
 	//generate the new token pair
-	return GenerateTokenPair(token.UserID, connection)
+	return GenerateTokenPair(token.UserEmail, connection)
 }

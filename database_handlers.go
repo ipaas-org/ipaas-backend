@@ -91,7 +91,7 @@ func (h Handler) NewDBHandler(w http.ResponseWriter, r *http.Request) {
 	Db.ID = primitive.NewObjectID()
 	Db.ContainerID = id
 	Db.Status = "up"
-	Db.StudentID = student.ID
+	Db.OwnerID = student.ID
 	Db.Type = "database"
 	Db.Name = fmt.Sprintf("%d:%s/%s", student.ID, dbPost.DbType, dbPost.DbName)
 	Db.Description = dbPost.DbDescription

@@ -127,7 +127,7 @@ func (h Handler) NewApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	app.ID = primitive.NewObjectID()
 	app.ContainerID = id
 	app.Status = status
-	app.StudentID = student.ID
+	app.OwnerID = student.ID
 	app.Type = "web"
 	app.Name = imageName
 	app.Description = appPost.Description
@@ -185,7 +185,7 @@ func (h Handler) DeleteApplicationHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if app.StudentID != student.ID {
+	if app.OwnerID != student.ID {
 		resp.Errorf(w, http.StatusForbidden, "you don't have permission to delete this application")
 		return
 	}
@@ -245,7 +245,7 @@ func (h Handler) UpdateApplicationHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if app.StudentID != student.ID {
+	if app.OwnerID != student.ID {
 		resp.Errorf(w, http.StatusForbidden, "you don't have permission to delete this application")
 		return
 	}

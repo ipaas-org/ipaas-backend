@@ -44,7 +44,7 @@ func CheckExpiries(execute chan string) {
 			}
 			for _, s := range states {
 				if s.ExpirationDate.Before(time.Now()) {
-					_, err = oauthStatesCollection.DeleteOne(context.Background(), bson.M{"_id": s.Id})
+					_, err = oauthStatesCollection.DeleteOne(context.Background(), bson.M{"_id": s.ID})
 					if err != nil {
 						log.Printf("[ERROR] Error deleting the state %s: %v\n", s.State, err)
 						continue
@@ -71,10 +71,10 @@ func CheckExpiries(execute chan string) {
 				if r.Expiration.Before(time.Now()) {
 					_, err = refreshTokensCollection.DeleteOne(context.Background(), bson.M{"_id": r.ID})
 					if err != nil {
-						log.Printf("[ERROR] Error deleting the refresh token (%s) for %d: %v\n", r.Token, r.UserID, err)
+						log.Printf("[ERROR] Error deleting the refresh token (%s) for %d: %v\n", r.Token, r.UserEmail, err)
 						continue
 					}
-					log.Printf("[INFO] Deleted refresh token (%s) for %d\n", r.Token, r.UserID)
+					log.Printf("[INFO] Deleted refresh token (%s) for %d\n", r.Token, r.UserEmail)
 				}
 			}
 			log.Println("[DEBUG] refreshTokens collection cleaned")
