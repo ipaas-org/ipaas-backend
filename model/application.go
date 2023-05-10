@@ -16,7 +16,7 @@ type Application struct {
 	ID             primitive.ObjectID `bson:"_id" json:"-"`
 	ContainerID    string             `bson:"containerID" json:"containerID,omitempty"`
 	Status         string             `bson:"status" json:"status,omitempty"`
-	StudentID      int                `bson:"studentID" json:"studentID,omitempty"`
+	OwnerUsername  string             `bson:"ownerUsername" json:"ownerUsername,omitempty"`
 	Type           string             `bson:"type" json:"type,omitempty"`
 	Name           string             `bson:"name" json:"name,omitempty"`
 	Description    string             `bson:"description" json:"description,omitempty"`
