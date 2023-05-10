@@ -1,0 +1,18 @@
+app:
+  name: "ipaas-mono"
+  version: "0.1.0"
+
+rabbitmq:
+  requestQueue: test
+  responseQueue: response-test
+
+logger:
+  level: "debug"
+  type: "text"
+
+database:
+  driver: "mock"
+
+oauth:
+  provider: "github"
+  redirectUrl: "http://localhost:8080/oauth/callback"
