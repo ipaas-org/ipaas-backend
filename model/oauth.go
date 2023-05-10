@@ -17,11 +17,10 @@ type (
 	}
 
 	State struct {
-		Id             primitive.ObjectID `bson:"_id"`
-		State          string             `json:"state"`
+		ID             primitive.ObjectID `bson:"_id"`
+		State          string             `bson:"state"`
 		Issued         time.Time          `bson:"issDate"`
 		ExpirationDate time.Time          `bson:"expDate"`
-		RedirectUri    string             `bson:"redirectUri"`
 	}
 
 	Polling struct {
@@ -35,5 +34,5 @@ type (
 
 const (
 	GrantTypeAuthorizationCode = "authorization_code"
-	BaseUrlPaleoID                 = "https://id.paleo.bg.it/"
+	BaseUrlPaleoID             = "https://id.paleo.bg.it/"
 )
