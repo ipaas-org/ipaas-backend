@@ -29,7 +29,7 @@ func (c *Controller) createAndStoreState(ctx context.Context) (string, error) {
 	return stateValue, err
 }
 
-func (c *Controller) OauthGenerateLoginUri(ctx context.Context) string {
+func (c *Controller) GenerateLoginUri(ctx context.Context) string {
 	state, err := c.createAndStoreState(ctx)
 	if err != nil {
 		c.l.Error("Error creating state: %s", err.Error())
@@ -39,11 +39,11 @@ func (c *Controller) OauthGenerateLoginUri(ctx context.Context) string {
 	return c.oauthService.GenerateLoginRedirectUri(state)
 }
 
-func (c *Controller) OauthCheckState(ctx context.Context, state string) (bool, error) {
+func (c *Controller) CheckState(ctx context.Context, state string) (bool, error) {
 	return c.stateRepo.DeleteByState(ctx, state)
 }
 
-func (c *Controller) OauthGetUser(ctx context.Context, code string) (model.User, error) {
+func (c *Controller) GetUserFromOauthCode(ctx context.Context, code string) (model.User, error) {
 	accessToken, err := c.oauthService.GetAccessTokenFromCode(code)
 	if err != nil {
 		c.l.Error("Error getting access token from code: %s", err.Error())

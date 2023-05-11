@@ -1,5 +1,5 @@
 package controller
 
-func (c *Controller) ContainerCreateNewContainer() {
+func (c *Controller) CreateNewContainer() {
 
 }

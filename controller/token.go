@@ -14,7 +14,7 @@ var (
 	ErrTokenExpired = errors.New("token expired")
 )
 
-func (c *Controller) TokenGenerateTokenPair(ctx context.Context, userEmail string) (string, string, error) {
+func (c *Controller) GenerateTokenPair(ctx context.Context, userEmail string) (string, string, error) {
 	accessToken, err := c.jwtHandler.GenerateToken(userEmail)
 	if err != nil {
 		return "", "", err
@@ -35,7 +35,7 @@ func (c *Controller) TokenGenerateTokenPair(ctx context.Context, userEmail strin
 	return accessToken, refreshTokenValue, err
 }
 
-func (c *Controller) TokenIsRefreshTokenExpired(ctx context.Context, refreshToken string) (bool, error) {
+func (c *Controller) IsRefreshTokenExpired(ctx context.Context, refreshToken string) (bool, error) {
 	token, err := c.tokenRepo.FindByToken(ctx, refreshToken)
 	if err != nil {
 		if err == repo.ErrNotFound {
@@ -47,7 +47,7 @@ func (c *Controller) TokenIsRefreshTokenExpired(ctx context.Context, refreshToke
 	return token.Expiration.Before(time.Now()), nil
 }
 
-func (c *Controller) TokenGetUserFromAccessToken(ctx context.Context, accessToken string) (*model.User, error) {
+func (c *Controller) GetUserFromAccessToken(ctx context.Context, accessToken string) (*model.User, error) {
 	claims, err := c.jwtHandler.ValidateToken(accessToken)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (c *Controller) TokenGetUserFromAccessToken(ctx context.Context, accessToke
 	return c.userRepo.FindByEmail(ctx, claims.UserEmail)
 }
 
-func (c *Controller) TokenGenerateTokenPairFromRefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
+func (c *Controller) GenerateTokenPairFromRefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
 	token, err := c.tokenRepo.FindByToken(ctx, refreshToken)
 	if err != nil {
 		return "", "", err
@@ -73,7 +73,7 @@ func (c *Controller) TokenGenerateTokenPairFromRefreshToken(ctx context.Context,
 	if _, err = c.tokenRepo.DeleteByToken(ctx, refreshToken); err != nil {
 		return "", "", err
 	}
-	return c.TokenGenerateTokenPair(ctx, token.UserEmail)
+	return c.GenerateTokenPair(ctx, token.UserEmail)
 }
 
 //TODO: Implement revoke token

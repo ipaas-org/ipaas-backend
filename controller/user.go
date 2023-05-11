@@ -7,7 +7,7 @@ import (
 	"github.com/ipaas-org/ipaas-backend/repo"
 )
 
-func (c *Controller) UserDoesUserExist(ctx context.Context, user model.User) (bool, error) {
+func (c *Controller) DoesUserExist(ctx context.Context, user model.User) (bool, error) {
 	_, err := c.userRepo.FindByEmail(ctx, user.Email)
 	if err != nil {
 		if err == repo.ErrNotFound {
@@ -18,12 +18,12 @@ func (c *Controller) UserDoesUserExist(ctx context.Context, user model.User) (bo
 	return true, nil
 }
 
-func (c *Controller) UserCreateUser(ctx context.Context, user model.User) error {
+func (c *Controller) CreateUser(ctx context.Context, user model.User) error {
 	c.l.Debugf("Creating user: %+v", user)
 	_, err := c.userRepo.InsertOne(ctx, &user)
 	return err
 }
 
-func (c *Controller) UserGetUser(ctx context.Context, email string) (*model.User, error) {
+func (c *Controller) GetUserFromEmail(ctx context.Context, email string) (*model.User, error) {
 	return c.userRepo.FindByEmail(ctx, email)
 }
