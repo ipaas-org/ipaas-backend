@@ -21,6 +21,27 @@ type ApplicationRepoerMongo struct {
 	collection *mongo.Collection
 }
 
+func (r *ApplicationRepoerMongo) FindByName(arg0 context.Context, arg1 string) (*model.Application, error) {
+	var entity model.Application
+	if err := r.collection.FindOne(arg0, bson.M{
+		"name": arg1,
+	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		return nil, err
+	}
+	return &entity, nil
+}
+
+func (r *ApplicationRepoerMongo) FindByNameAndOwnerUsername(ctx context.Context, name, ownerUsername string) (*model.Application, error) {
+	var entity model.Application
+	if err := r.collection.FindOne(ctx, bson.M{
+		"name":          name,
+		"ownerUsername": ownerUsername,
+	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		return nil, err
+	}
+	return &entity, nil
+}
+
 func (r *ApplicationRepoerMongo) FindByContainerID(arg0 context.Context, arg1 string) (*model.Application, error) {
 	var entity model.Application
 	if err := r.collection.FindOne(arg0, bson.M{
@@ -44,7 +65,6 @@ func (r *ApplicationRepoerMongo) FindByOwnerUsername(arg0 context.Context, arg1 
 	}
 	return entities, nil
 }
-
 
 func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndTypeAndIsPublicTrue(arg0 context.Context, arg1 string, arg2 string) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(arg0, bson.M{

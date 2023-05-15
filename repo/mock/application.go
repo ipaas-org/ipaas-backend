@@ -18,6 +18,24 @@ type ApplicationRepoerMock struct {
 	storage map[primitive.ObjectID]*model.Application
 }
 
+func (r *ApplicationRepoerMock) FindByName(arg0 context.Context, arg1 string) (*model.Application, error) {
+	for _, entity := range r.storage {
+		if entity.Name == arg1 {
+			return entity, nil
+		}
+	}
+	return nil, repo.ErrNotFound
+}
+
+func (r *ApplicationRepoerMock) FindByNameAndOwnerUsername(ctx context.Context, name, ownerUsername string) (*model.Application, error) {
+	for _, entity := range r.storage {
+		if entity.Name == name && entity.OwnerUsername == ownerUsername {
+			return entity, nil
+		}
+	}
+	return nil, repo.ErrNotFound
+}
+
 func (r *ApplicationRepoerMock) FindByContainerID(arg0 context.Context, arg1 string) (*model.Application, error) {
 	for _, entity := range r.storage {
 		if entity.ContainerID == arg1 {

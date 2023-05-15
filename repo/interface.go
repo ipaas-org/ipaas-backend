@@ -30,6 +30,8 @@ type (
 	}
 
 	ApplicationRepoer interface {
+		FindByName(ctx context.Context, name string) (*model.Application, error)
+		FindByNameAndOwnerUsername(ctx context.Context, name, ownerUsername string) (*model.Application, error)
 		FindByContainerID(ctx context.Context, containerID string) (*model.Application, error)
 		FindByOwnerUsername(ctx context.Context, ownerUsername string) ([]*model.Application, error)
 		FindByOwnerUsernameAndTypeAndIsPublicTrue(ctx context.Context, ownerUsername string, appType string) ([]*model.Application, error)
