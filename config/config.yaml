@@ -1,6 +1,7 @@
 app:
   name: "ipaas-mono"
   version: "0.1.0"
+  deployment: "dev"
 
 rabbitmq:
   requestQueue: test
