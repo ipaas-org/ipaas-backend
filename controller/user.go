@@ -19,7 +19,7 @@ func (c *Controller) DoesUserExist(ctx context.Context, user model.User) (bool, 
 }
 
 func (c *Controller) CreateUser(ctx context.Context, user model.User) error {
-	c.l.Debugf("Creating user: %+v", user)
+	c.l.Debugf("Creating user %s(%s) %s", user.Username, user.FullName, user.Email)
 	_, err := c.userRepo.InsertOne(ctx, &user)
 	return err
 }
