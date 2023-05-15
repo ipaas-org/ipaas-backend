@@ -6,6 +6,8 @@ import (
 	"github.com/ipaas-org/ipaas-backend/repo"
 	"github.com/ipaas-org/ipaas-backend/services/oauth"
 	"github.com/ipaas-org/ipaas-backend/services/oauth/github"
+	"github.com/ipaas-org/ipaas-backend/services/serviceManager"
+	"github.com/ipaas-org/ipaas-backend/services/serviceManager/docker"
 	"github.com/sirupsen/logrus"
 )
 
@@ -17,8 +19,10 @@ type Controller struct {
 	stateRepo       repo.StateRepoer
 	applicationRepo repo.ApplicationRepoer
 
-	oauthService oauth.Oauther
-	jwtHandler   *jwt.JWThandler
+	oauthService   oauth.Oauther
+	jwtHandler     *jwt.JWThandler
+	serviceManager serviceManager.ServiceManager
+	app            config.App
 }
 
 func NewBuilderController(config *config.Config, l *logrus.Logger) *Controller {
@@ -31,12 +35,19 @@ func NewBuilderController(config *config.Config, l *logrus.Logger) *Controller {
 		l.Fatalf("Unknown oauth provider: %s", config.Oauth.Provider)
 	}
 
+	serviceManager, err := docker.NewDockerApplicationManager()
+	if err != nil {
+		l.Fatalf("Failed to create docker service manager: %v", err)
+	}
+
 	jwtHandler := jwt.NewJWThandler(config.JWT.Secret, config.App.Name+":"+config.App.Version)
 
 	return &Controller{
-		l:            l,
-		oauthService: provider,
-		jwtHandler:   jwtHandler,
+		l:              l,
+		oauthService:   provider,
+		jwtHandler:     jwtHandler,
+		serviceManager: serviceManager,
+		app:            config.App,
 	}
 }
 
