@@ -30,12 +30,12 @@ type Application struct {
 	IsPublic       bool               `bson:"isPublic" json:"isPublic"`
 	IsUpdatable    bool               `bson:"isUpdatable,omitempty" json:"isUpdatable"`
 	Img            string             `bson:"img,omitempty" json:"img,omitempty"`
-	Envs           []Env              `bson:"envs,omitempty" json:"envs,omitempty"`
+	Envs           []KeyValue         `bson:"envs,omitempty" json:"envs,omitempty"`
 	Tags           []string           `bson:"tags,omitempty" json:"tags,omitempty"`
 	Stars          []string           `bson:"stars,omitempty" json:"stars,omitempty"`
 }
 
-type Env struct {
+type KeyValue struct {
 	Key   string `bson:"key" json:"key"`
 	Value string `bson:"value" json:"value"`
 }
