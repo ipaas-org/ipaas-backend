@@ -85,3 +85,15 @@ func (d DockerApplicationManager) RemoveContainer(ctx context.Context, id string
 func (d DockerApplicationManager) StartContainer(ctx context.Context, id string) error {
 	return d.cli.ContainerStart(ctx, id, types.ContainerStartOptions{})
 }
+
+func (d DockerApplicationManager) CreateNewNetwork(ctx context.Context, name string) (string, error) {
+	resp, err := d.cli.NetworkCreate(ctx, name, types.NetworkCreate{
+		Driver:     "bridge",
+		Attachable: true,
+	})
+	return resp.ID, err
+}
+
+func (d DockerApplicationManager) RemoveNetwork(ctx context.Context, id string) error {
+	return d.cli.NetworkRemove(ctx, id)
+}

@@ -13,6 +13,9 @@ type ServiceManager interface {
 	CreateNewContainer(ctx context.Context, name, image string, envs, labels []model.KeyValue) (string, string, error)
 
 	ConnectContainerToNetwork(ctx context.Context, containerID, networkID, dnsAlias string) error
+
+	CreateNewNetwork(ctx context.Context, name string) (string, error)
+	RemoveNetwork(ctx context.Context, id string) error
 	//force remove a container
 	RemoveContainer(ctx context.Context, id string) error
 
