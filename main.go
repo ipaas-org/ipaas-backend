@@ -11,9 +11,12 @@ import (
 
 	"github.com/ipaas-org/ipaas-backend/config"
 	"github.com/ipaas-org/ipaas-backend/controller"
+	"github.com/ipaas-org/ipaas-backend/handlers/httpserver"
+	"github.com/ipaas-org/ipaas-backend/handlers/rabbitmq"
 	"github.com/ipaas-org/ipaas-backend/pkg/logger"
 	"github.com/ipaas-org/ipaas-backend/repo/mock"
 	mongoRepo "github.com/ipaas-org/ipaas-backend/repo/mongo"
+	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -27,7 +30,7 @@ func main() {
 	l := logger.NewLogger(conf.Log.Level, conf.Log.Type)
 	l.Debug("initizalized logger")
 
-	c := controller.NewBuilderController(l)
+	c := controller.NewBuilderController(conf, l)
 	l.Debugf("conf: %+v\n", conf)
 
 	switch conf.Database.Driver {
@@ -70,6 +73,16 @@ func main() {
 		c.SetApplicationRepo(applicationRepo)
 	}
 
+	e := echo.New()
+	httpserver.InitRouter(e, l, c, conf)
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		e.Logger.Fatal(e.Start(":" + conf.HTTP.Port))
+	}()
+
 	rmq := rabbitmq.NewRabbitMQ(conf.RMQ.URI, conf.RMQ.RequestQueue, conf.RMQ.ResponseQueue, c, l)
 
 	if err := rmq.Connect(); err != nil {
@@ -77,9 +90,6 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	// Waiting signal
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		rmq.Consume(ctx)
@@ -88,7 +98,10 @@ func main() {
 	select {
 	case s := <-interrupt:
 		l.Info("app - Run - signal: " + s.String())
+		e.Close()
 		cancel()
+		return
+	// cancel()
 	case err = <-rmq.Error:
 		l.Error(fmt.Errorf("rabbitmq: %w", err))
 	}
