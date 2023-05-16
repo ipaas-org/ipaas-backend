@@ -21,11 +21,27 @@ type ApplicationRepoerMongo struct {
 	collection *mongo.Collection
 }
 
+func (r *ApplicationRepoerMongo) FindByID(arg0 context.Context, arg1 primitive.ObjectID) (*model.Application, error) {
+	var entity model.Application
+	if err := r.collection.FindOne(arg0, bson.M{
+		"_id": arg1,
+	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
+		return nil, err
+	}
+	return &entity, nil
+}
+
 func (r *ApplicationRepoerMongo) FindByName(arg0 context.Context, arg1 string) (*model.Application, error) {
 	var entity model.Application
 	if err := r.collection.FindOne(arg0, bson.M{
 		"name": arg1,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return &entity, nil
@@ -37,6 +53,9 @@ func (r *ApplicationRepoerMongo) FindByNameAndOwnerUsername(ctx context.Context,
 		"name":          name,
 		"ownerUsername": ownerUsername,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return &entity, nil
@@ -47,6 +66,9 @@ func (r *ApplicationRepoerMongo) FindByContainerID(arg0 context.Context, arg1 st
 	if err := r.collection.FindOne(arg0, bson.M{
 		"containerID": arg1,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return &entity, nil
@@ -61,6 +83,9 @@ func (r *ApplicationRepoerMongo) FindByOwnerUsername(arg0 context.Context, arg1 
 	}
 	var entities []*model.Application
 	if err := cursor.All(arg0, &entities); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return entities, nil
@@ -79,6 +104,9 @@ func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndTypeAndIsPublicTrue(arg0 
 	}
 	var entities []*model.Application
 	if err := cursor.All(arg0, &entities); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return entities, nil
@@ -97,6 +125,9 @@ func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndTypeAndIsPublicFalse(arg0
 	}
 	var entities []*model.Application
 	if err := cursor.All(arg0, &entities); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return entities, nil
@@ -114,12 +145,16 @@ func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndIsUpdatableTrue(arg0 cont
 	}
 	var entities []*model.Application
 	if err := cursor.All(arg0, &entities); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return entities, nil
 }
 
 func (r *ApplicationRepoerMongo) Insert(arg0 context.Context, arg1 *model.Application) (interface{}, error) {
+	arg1.ID = primitive.NewObjectID()
 	result, err := r.collection.InsertOne(arg0, arg1)
 	if err != nil {
 		return nil, err
@@ -134,6 +169,9 @@ func (r *ApplicationRepoerMongo) UpdateByID(arg0 context.Context, arg1 *model.Ap
 		"$set": arg1,
 	})
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, repo.ErrNotFound
+		}
 		return false, err
 	}
 	return result.MatchedCount > 0, err
@@ -144,6 +182,9 @@ func (r *ApplicationRepoerMongo) DeleteByID(arg0 context.Context, arg1 primitive
 		"_id": arg1,
 	})
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, repo.ErrNotFound
+		}
 		return false, err
 	}
 	return result.DeletedCount > 0, nil

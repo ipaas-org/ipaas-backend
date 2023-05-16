@@ -18,6 +18,14 @@ type ApplicationRepoerMock struct {
 	storage map[primitive.ObjectID]*model.Application
 }
 
+func (r *ApplicationRepoerMock) FindByID(arg0 context.Context, arg1 primitive.ObjectID) (*model.Application, error) {
+	entity, ok := r.storage[arg1]
+	if ok {
+		return entity, nil
+	}
+	return nil, repo.ErrNotFound
+}
+
 func (r *ApplicationRepoerMock) FindByName(arg0 context.Context, arg1 string) (*model.Application, error) {
 	for _, entity := range r.storage {
 		if entity.Name == arg1 {

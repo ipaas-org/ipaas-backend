@@ -6,6 +6,7 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -25,12 +26,16 @@ func (r *StateRepoerMongo) FindByState(ctx context.Context, state string) (*mode
 	if err := r.collection.FindOne(ctx, bson.M{
 		"state": state,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return &entity, nil
 }
 
 func (r *StateRepoerMongo) Insert(ctx context.Context, state *model.State) (interface{}, error) {
+	state.ID = primitive.NewObjectID()
 	result, err := r.collection.InsertOne(ctx, state)
 	if err != nil {
 		return nil, err
@@ -43,6 +48,9 @@ func (r *StateRepoerMongo) DeleteByState(ctx context.Context, state string) (boo
 		"state": state,
 	})
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, repo.ErrNotFound
+		}
 		return false, err
 	}
 	return result.DeletedCount > 0, nil

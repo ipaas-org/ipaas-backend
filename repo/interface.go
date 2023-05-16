@@ -30,6 +30,7 @@ type (
 	}
 
 	ApplicationRepoer interface {
+		FindByID(ctx context.Context, id primitive.ObjectID) (*model.Application, error)
 		FindByName(ctx context.Context, name string) (*model.Application, error)
 		FindByNameAndOwnerUsername(ctx context.Context, name, ownerUsername string) (*model.Application, error)
 		FindByContainerID(ctx context.Context, containerID string) (*model.Application, error)

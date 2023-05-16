@@ -6,6 +6,7 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -25,12 +26,16 @@ func (r *TokenRepoerMongo) FindByToken(ctx context.Context, token string) (*mode
 	if err := r.collection.FindOne(ctx, bson.M{
 		"token": token,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return &entity, nil
 }
 
 func (r *TokenRepoerMongo) Insert(ctx context.Context, token *model.RefreshToken) (interface{}, error) {
+	token.ID = primitive.NewObjectID()
 	result, err := r.collection.InsertOne(ctx, token)
 	if err != nil {
 		return nil, err
@@ -43,6 +48,9 @@ func (r *TokenRepoerMongo) DeleteByToken(ctx context.Context, token string) (boo
 		"token": token,
 	})
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, repo.ErrNotFound
+		}
 		return false, err
 	}
 	return result.DeletedCount > 0, nil

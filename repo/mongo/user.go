@@ -22,6 +22,7 @@ type UserRepoerMongo struct {
 }
 
 func (r *UserRepoerMongo) InsertOne(ctx context.Context, user *model.User) (interface{}, error) {
+	user.ID = primitive.NewObjectID()
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
@@ -38,6 +39,9 @@ func (r *UserRepoerMongo) UpdateGithubAccessTokenByID(ctx context.Context, githu
 		},
 	})
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, repo.ErrNotFound
+		}
 		return false, err
 	}
 	return result.ModifiedCount > 0, nil
@@ -48,6 +52,9 @@ func (r *UserRepoerMongo) FindByID(ctx context.Context, id primitive.ObjectID) (
 	if err := r.collection.FindOne(ctx, bson.M{
 		"_id": id,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return &entity, nil
@@ -58,6 +65,9 @@ func (r *UserRepoerMongo) FindByEmail(ctx context.Context, email string) (*model
 	if err := r.collection.FindOne(ctx, bson.M{
 		"email": email,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return &entity, nil
@@ -68,6 +78,9 @@ func (r *UserRepoerMongo) FindByUsername(ctx context.Context, username string) (
 	if err := r.collection.FindOne(ctx, bson.M{
 		"username": username,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
 		return nil, err
 	}
 	return &entity, nil
@@ -78,6 +91,9 @@ func (r *UserRepoerMongo) DeleteByID(ctx context.Context, id primitive.ObjectID)
 		"_id": id,
 	})
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, repo.ErrNotFound
+		}
 		return false, err
 	}
 	return result.DeletedCount > 0, nil
