@@ -2,9 +2,12 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
+	"github.com/ipaas-org/ipaas-backend/repo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type serviceType string
@@ -14,13 +17,15 @@ const (
 	DatabaseType serviceType = "database"
 
 	StatusCreating = "creating"
+	StatusRunning  = "running"
 )
 
 // todo: is not available when there is a web applpication with the same name
 // todo: skip this step if it is a database
 func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string) bool {
 	_, err := c.applicationRepo.FindByName(ctx, name)
-	return err == nil
+	c.l.Debugf("checking if name is available: %s", err.Error())
+	return err == nil || err == repo.ErrNotFound
 }
 
 // todo: use this function to check if the name is available for a database
@@ -56,6 +61,14 @@ func (c *Controller) CreateNewContainer(ctx context.Context, serviceType service
 	return c.serviceManager.CreateNewContainer(ctx, name, image, env, labes)
 }
 
+func (c *Controller) RemoveNetwork(ctx context.Context, id string) error {
+	return c.serviceManager.RemoveNetwork(ctx, id)
+}
+
+func (c *Controller) CreateNewNetwork(ctx context.Context, name string) (string, error) {
+	return c.serviceManager.CreateNewNetwork(ctx, name)
+}
+
 func (c *Controller) ConnectContainerToNetwork(ctx context.Context, containerID, networkID, dnsAlias string) error {
 	return c.serviceManager.ConnectContainerToNetwork(ctx, containerID, networkID, dnsAlias)
 }
@@ -66,4 +79,35 @@ func (c *Controller) RemoveContainer(ctx context.Context, id string) error {
 
 func (c *Controller) StartContainer(ctx context.Context, id string) error {
 	return c.serviceManager.StartContainer(ctx, id)
+}
+
+func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, image string) error {
+
+	uuid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		c.l.Errorf("error parsing uuid: %v", err)
+		return fmt.Errorf("primitive.ObjectIDFromHex: %w", err)
+	}
+
+	app, err := c.applicationRepo.FindByID(ctx, uuid)
+	if err != nil {
+		c.l.Errorf("error finding application: %v", err)
+		return fmt.Errorf("c.applicationRepo.FindByID: %w", err)
+	}
+
+	containerID, _, err := c.CreateNewContainer(ctx, WebType, app.OwnerUsername, app.Name, app.ImageID, app.Envs)
+	if err != nil {
+		c.l.Errorf("error creating new container: %v", err)
+		return fmt.Errorf("c.CreateNewContainer: %w", err)
+	}
+
+	app.Status = StatusRunning
+	app.ImageID = image
+	app.ContainerID = containerID
+
+	if _, err := c.applicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+		c.l.Errorf("error updating application status: %v", err)
+		return fmt.Errorf("c.applicationRepo.UpdateByID: %w", err)
+	}
+	return c.StartContainer(ctx, containerID)
 }
