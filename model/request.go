@@ -9,6 +9,7 @@ type DbPost struct {
 }
 
 type AppPost struct {
+	Name          string     `json:"name"`
 	GithubRepoUrl string     `json:"github-repo"`
 	GithubBranch  string     `json:"github-branch"`
 	Language      string     `json:"language"`
