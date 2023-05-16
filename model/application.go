@@ -15,6 +15,7 @@ type DbContainerConfig struct {
 type Application struct {
 	ID             primitive.ObjectID `bson:"_id" json:"-"`
 	ContainerID    string             `bson:"containerID" json:"containerID,omitempty"`
+	ImageID        string             `bson:"imageID" json:"imageID,omitempty"`
 	Status         string             `bson:"status" json:"status,omitempty"`
 	OwnerUsername  string             `bson:"ownerUsername" json:"ownerUsername,omitempty"`
 	Type           string             `bson:"type" json:"type,omitempty"`
