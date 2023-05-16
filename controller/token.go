@@ -47,6 +47,10 @@ func (c *Controller) IsRefreshTokenExpired(ctx context.Context, refreshToken str
 	return token.Expiration.Before(time.Now()), nil
 }
 
+func (c *Controller) IsAccessTokenExpired(ctx context.Context, accessToken string) (bool, error) {
+	return c.jwtHandler.IsTokenExpired(accessToken)
+}
+
 func (c *Controller) GetUserFromAccessToken(ctx context.Context, accessToken string) (*model.User, error) {
 	claims, err := c.jwtHandler.ValidateToken(accessToken)
 	if err != nil {
