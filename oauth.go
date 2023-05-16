@@ -134,7 +134,7 @@ func CheckState(cypher string) (valid bool, redirectUri string, state string, er
 		return false, "", "", fmt.Errorf("state expired, it was issued %v ago", time.Since(s.Issued))
 	}
 
-	return true, s.RedirectUri, state, nil
+	return true, "s.RedirectUri", state, nil
 }
 
 func GetPollingIDFromState(state string, connection *mongo.Database) (pollingID string, found bool, err error) {
@@ -253,7 +253,7 @@ func GetStudentFromPaleoIDAccessToken(accessToken string) (model.User, error) {
 
 	//parse the body into a student struct (from the json response)
 	var student model.User
-	student.IsMock = false
+	// student.IsMock = false
 	err = json.Unmarshal(body, &student)
 	return student, err
 }

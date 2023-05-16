@@ -30,7 +30,7 @@ type ContainerController struct {
 // CreateImage will create an image given the creator id, port to expose (in the docker),
 // name of the app, path for the tmp file, lang for the dockerfile and envs, if no error occurs
 // the function will return the image name and image id
-func (c ContainerController) CreateImage(creatorID, port int, name, branch, path, language string, envs []model.Env) (string, string, error) {
+func (c ContainerController) CreateImage(creatorID, port int, name, branch, path, language string, envs []model.KeyValue) (string, string, error) {
 	//check if the language is supported
 	var found bool
 	for _, l := range Langs {

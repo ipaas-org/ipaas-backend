@@ -462,10 +462,10 @@ func (h Handler) MockRegisterUserHandler(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	if student.Name != "" {
-		resp.Error(w, http.StatusBadRequest, "User already exists")
-		return
-	}
+	// if student.Name != "" {
+	// 	resp.Error(w, http.StatusBadRequest, "User already exists")
+	// 	return
+	// }
 
 	//hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(bodyStruct.Password), 8)
@@ -580,13 +580,13 @@ func (h Handler) MockLoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if strconv.Itoa(student.ID) == "" {
-		resp.Error(w, http.StatusBadRequest, "User does not exist")
-		return
-	}
+	// if strconv.Itoa(student.ID) == "" {
+	// 	resp.Error(w, http.StatusBadRequest, "User does not exist")
+	// 	return
+	// }
 
 	//create the access token
-	accessToken, refreshToken, err := GenerateTokenPair(student.ID, db)
+	accessToken, refreshToken, err := GenerateTokenPair(1, db)
 	if err != nil {
 		resp.Error(w, http.StatusInternalServerError, err.Error())
 		return

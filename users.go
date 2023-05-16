@@ -46,7 +46,7 @@ func IsUserRegistered(userID int, connection *mongo.Database) (bool, error) {
 // adds the student to the db (it's a pointer because here we generate the pfp)
 func AddStudent(student *model.User, connection *mongo.Database) error {
 	//check if it's already registered
-	exists, err := IsUserRegistered(student.ID, connection)
+	exists, err := IsUserRegistered(1, connection)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func registerOrGenerateTokenFromPaleoIDAccessToken(paleoidAccess string, connect
 	}
 
 	//check if it's in the db
-	registered, err := IsUserRegistered(student.ID, connection)
+	registered, err := IsUserRegistered(1, connection)
 	log.Printf("the user with %d is registered? %t ", student.ID, registered)
 	if err != nil {
 		return nil, false, err
@@ -85,7 +85,7 @@ func registerOrGenerateTokenFromPaleoIDAccessToken(paleoidAccess string, connect
 		}
 	}
 	//generate the ipaas tokens
-	access, refresh, err := GenerateTokenPair(student.ID, connection)
+	access, refresh, err := GenerateTokenPair(1, connection)
 	if err != nil {
 		return nil, false, fmt.Errorf("error generating token pair: %v", err)
 	}

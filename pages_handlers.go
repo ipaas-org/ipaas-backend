@@ -189,7 +189,7 @@ func (h Handler) UserPageHandler(w http.ResponseWriter, r *http.Request) {
 		// Apps string
 		// DBs  string
 	}{
-		Name: student.Name + " " + student.LastName,
+		Name: "", // student.Name + " " + student.LastName,
 		Pfp:  student.Pfp,
 		// Apps: appHTMLString,
 		// DBs:  dbHTMlstring,
@@ -221,7 +221,8 @@ func (h Handler) PublicStudentPageHandler(w http.ResponseWriter, r *http.Request
 		resp.Error(w, http.StatusBadRequest, "invalid student id")
 		return
 	}
-	student, err := GetStudentFromID(idI, db)
+	// student
+	_, err = GetStudentFromID(idI, db)
 	if err != nil {
 		resp.Error(w, http.StatusInternalServerError, err.Error())
 		return
@@ -241,8 +242,8 @@ func (h Handler) PublicStudentPageHandler(w http.ResponseWriter, r *http.Request
 		LastName  string
 	}{
 		StudentID: id,
-		Name:      student.Name,
-		LastName:  student.LastName,
+		Name:      "", //student.Name,
+		LastName:  "", //student.LastName,
 	}
 
 	fmt.Println(toParse)

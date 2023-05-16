@@ -34,7 +34,8 @@ func (h Handler) NewApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	defer conn.Client().Disconnect(context.Background())
 
 	//get the student from the cookies
-	student, err := h.util.GetUserFromCookie(r, conn)
+	//student
+	_, err = h.util.GetUserFromCookie(r, conn)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error getting the user from cookies: %v", err.Error())
 		return
@@ -57,7 +58,7 @@ func (h Handler) NewApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//download the repo
-	repo, name, hash, err := h.util.DownloadGithubRepo(student.ID, appPost.GithubBranch, appPost.GithubRepoUrl)
+	repo, name, hash, err := h.util.DownloadGithubRepo(1, appPost.GithubBranch, appPost.GithubRepoUrl)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error downloading the repo, try again in one minute: %v", err.Error())
 		return
@@ -74,7 +75,7 @@ func (h Handler) NewApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//create the image from the repo downloaded
-	imageName, imageID, err := h.cc.CreateImage(student.ID, port, name, appPost.GithubBranch, repo, appPost.Language, appPost.Envs)
+	imageName, imageID, err := h.cc.CreateImage(1, port, name, appPost.GithubBranch, repo, "", appPost.Envs)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error creating the image: %v", err.Error())
 		return
@@ -84,7 +85,7 @@ func (h Handler) NewApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("id:", imageID)
 
 	//create the container from the image just created
-	id, err := h.cc.CreateNewApplicationFromRepo(student.ID, appPost.Port, name, appPost.Language, imageName)
+	id, err := h.cc.CreateNewApplicationFromRepo(1, appPost.Port, name, "", imageName)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error creating the container: %v", err.Error())
 		return
@@ -127,14 +128,14 @@ func (h Handler) NewApplicationHandler(w http.ResponseWriter, r *http.Request) {
 	app.ID = primitive.NewObjectID()
 	app.ContainerID = id
 	app.Status = status
-	app.OwnerID = student.ID
+	// app.OwnerID = student.ID
 	app.Type = "web"
 	app.Name = imageName
-	app.Description = appPost.Description
+	// app.Description = appPost.Description
 	app.GithubRepo = appPost.GithubRepoUrl
 	app.LastCommitHash = hash
 	app.Port = appPost.Port
-	app.Lang = appPost.Language
+	// app.Lang = appPost.Language
 	app.ExternalPort = exernalPort
 	app.CreatedAt = time.Now()
 	app.Envs = appPost.Envs
@@ -168,7 +169,7 @@ func (h Handler) DeleteApplicationHandler(w http.ResponseWriter, r *http.Request
 	defer conn.Client().Disconnect(context.Background())
 
 	//get the student from the cookies
-	student, err := h.util.GetUserFromCookie(r, conn)
+	_, err = h.util.GetUserFromCookie(r, conn)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error getting the user from cookies: %v", err.Error())
 		return
@@ -185,10 +186,10 @@ func (h Handler) DeleteApplicationHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if app.OwnerID != student.ID {
-		resp.Errorf(w, http.StatusForbidden, "you don't have permission to delete this application")
-		return
-	}
+	// if app.OwnerID != student.ID {
+	// 	resp.Errorf(w, http.StatusForbidden, "you don't have permission to delete this application")
+	// 	return
+	// }
 
 	//delete the container
 	err = h.cc.DeleteContainer(containerID)
@@ -231,7 +232,7 @@ func (h Handler) UpdateApplicationHandler(w http.ResponseWriter, r *http.Request
 		resp.Errorf(w, http.StatusInternalServerError, "error getting the user from cookies: %v", err.Error())
 		return
 	}
-
+	fmt.Println(student)
 	//get the application from the database and check if it's owned by the student
 	applicationCollection := conn.Collection("applications")
 	var app model.Application
@@ -245,10 +246,10 @@ func (h Handler) UpdateApplicationHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if app.OwnerID != student.ID {
-		resp.Errorf(w, http.StatusForbidden, "you don't have permission to delete this application")
-		return
-	}
+	// if app.OwnerID != student.ID {
+	// 	resp.Errorf(w, http.StatusForbidden, "you don't have permission to delete this application")
+	// 	return
+	// }
 
 	//check if the commit has changed
 	changed, err := h.util.HasLastCommitChanged(app.LastCommitHash, app.GithubRepo, "") //app.GithubBranch)
@@ -264,7 +265,7 @@ func (h Handler) UpdateApplicationHandler(w http.ResponseWriter, r *http.Request
 
 	//download the repo
 	//TODO: implement the branch
-	repo, name, hash, err := h.util.DownloadGithubRepo(student.ID, "", app.GithubRepo)
+	repo, name, hash, err := h.util.DownloadGithubRepo(1, "", app.GithubRepo)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error downloading the repo, try again in one minute: %v", err.Error())
 		return
@@ -285,14 +286,14 @@ func (h Handler) UpdateApplicationHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	//create the image from the repo downloaded
-	imageName, _, err := h.cc.CreateImage(student.ID, Intport, name, repo, app.GithubBranch, app.Lang, app.Envs)
+	imageName, _, err := h.cc.CreateImage(1, Intport, name, repo, app.GithubBranch, app.Lang, app.Envs)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error creating the image: %v", err.Error())
 		return
 	}
 
 	//create the container from the image just created
-	newContainerID, err := h.cc.CreateNewApplicationFromRepo(student.ID, app.Port, name, app.Lang, imageName)
+	newContainerID, err := h.cc.CreateNewApplicationFromRepo(1, app.Port, name, app.Lang, imageName)
 	if err != nil {
 		resp.Errorf(w, http.StatusInternalServerError, "error creating the container: %v", err.Error())
 		return
