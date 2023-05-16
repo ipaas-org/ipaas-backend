@@ -1,0 +1,145 @@
+package rabbitmq
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/ipaas-org/ipaas-backend/controller"
+	"github.com/ipaas-org/ipaas-backend/model"
+	"github.com/sirupsen/logrus"
+	"github.com/streadway/amqp"
+)
+
+type RabbitMQ struct {
+	l                 *logrus.Logger
+	Error             <-chan error
+	Connection        *amqp.Connection
+	Channel           *amqp.Channel
+	ResponseQueue     amqp.Queue
+	Delivery          <-chan amqp.Delivery
+	uri               string
+	requestQueueName  string
+	responseQueueName string
+	Controller        *controller.Controller
+}
+
+func NewRabbitMQ(uri, requestQueue, reponseQueue string, controller *controller.Controller, logger *logrus.Logger) *RabbitMQ {
+	return &RabbitMQ{
+		uri:               uri,
+		l:                 logger,
+		requestQueueName:  requestQueue,
+		responseQueueName: reponseQueue,
+		Controller:        controller,
+	}
+}
+
+func (r *RabbitMQ) Connect() error {
+	r.l.Info("connecting to rabbitmq")
+	r.l.Debug(r.uri)
+	var err error
+	r.Connection, err = amqp.Dial(r.uri)
+	if err != nil {
+		return fmt.Errorf("ampq.Dial: %w", err)
+	}
+
+	r.Channel, err = r.Connection.Channel()
+	if err != nil {
+		return fmt.Errorf("r.Connection.Channel: %w", err)
+	}
+
+	if err = r.Channel.Qos(1, 0, false); err != nil {
+		return fmt.Errorf("r.Channel.Qos: %w", err)
+	}
+
+	r.ResponseQueue, err = r.Channel.QueueDeclare(
+		r.responseQueueName, // name
+		true,                // durable
+		false,               // delete when unused
+		false,               // exclusive
+		false,               // no-wait
+		nil,                 // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("r.Channel.QueueDeclare: %w", err)
+	}
+
+	q, err := r.Channel.QueueDeclare(
+		r.requestQueueName, // name
+		true,               // durable
+		false,              // delete when unused
+		false,              // exclusive
+		false,              // no-wait
+		nil,                // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("r.Channel.QueueDeclare: %w", err)
+	}
+
+	r.Delivery, err = r.Channel.Consume(
+		q.Name, // queue
+		"",     // consumer
+		false,  // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
+	)
+	if err != nil {
+		return fmt.Errorf("r.Channel.Consume: %w", err)
+	}
+
+	return nil
+}
+
+func (r *RabbitMQ) Close() error {
+	if err := r.Channel.Close(); err != nil {
+		return fmt.Errorf("r.Channel.Close: %w", err)
+	}
+
+	if err := r.Connection.Close(); err != nil {
+		return fmt.Errorf("r.Connection.Close: %w", err)
+	}
+
+	return nil
+}
+
+func (r *RabbitMQ) Consume(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			r.l.Info("stopping rabbitmq consumer")
+			return
+		case err := <-r.Error:
+			r.l.Error(err)
+		case d := <-r.Delivery:
+			r.l.Info("received message from rabbitmq")
+			r.l.Debug(string(d.Body))
+
+			var response model.BuildResponse
+			if err := json.Unmarshal(d.Body, &response); err != nil {
+				r.l.Error("r.Consume.json.Unmarshal(): %w:", err)
+				r.l.Debug(string(d.Body))
+				if err := d.Ack(false); err != nil {
+					r.l.Error("r.Consume.Nack(): %w:", err)
+				}
+			}
+
+			r.l.Debug(response)
+			imageID, err := r.Controller.ValidateImageResponse(ctx, response)
+			if err != nil {
+				r.l.Error("r.Controller.ValidateImageResponse(): %w:", err)
+				if err := d.Ack(false); err != nil {
+					r.l.Error("r.Consume.Nack(): %w:", err)
+				}
+			}
+
+			if err := r.Controller.CreateContainerFromIDAndImage(ctx, response.UUID, imageID); err != nil {
+				r.l.Error("r.Controller.CreateContainerFromIDAndImage(): %w:", err)
+				if err := d.Ack(false); err != nil {
+					r.l.Error("r.Consume.Nack(): %w:", err)
+				}
+			}
+		}
+	}
+}
