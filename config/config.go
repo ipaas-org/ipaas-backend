@@ -16,6 +16,7 @@ type (
 		JWT      `yaml:"jwt"`
 		Oauth    `yaml:"oauth"`
 		RMQ      `yaml:"rabbitmq"`
+		HTTP     `yaml:"http"`
 		Database `yaml:"database"`
 	}
 
@@ -42,6 +43,10 @@ type (
 		ClientSecret string `env:"OAUTH_CLIENT_SECRET"`
 	}
 
+	HTTP struct {
+		Port string `env-required:"true" yaml:"port" env:"HTTP_PORT"`
+	}
+
 	RMQ struct {
 		URI           string `env-required:"true" yaml:"uri" env:"RABBITMQ_URI"`
 		RequestQueue  string `env-required:"true" yaml:"requestQueue" env:"RABBITMQ_REQUEST_QUEUE"`
@@ -65,7 +70,16 @@ func NewConfig() (*Config, error) {
 		}
 	}
 
-	if err := cleanenv.ReadConfig("./config/config.yml", cfg); err != nil {
+	mustCheck := []string{"JWT_SECRET", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_SECRET"}
+
+	for _, v := range mustCheck {
+		logrus.Debug(os.Getenv(v))
+		if os.Getenv(v) == "" {
+			return nil, fmt.Errorf("%s is not set, this env variable is required", v)
+		}
+	}
+
+	if err := cleanenv.ReadConfig("./config/config.yaml", cfg); err != nil {
 		return nil, fmt.Errorf("config error: %w", err)
 	}
 
@@ -76,14 +90,6 @@ func NewConfig() (*Config, error) {
 	if cfg.Database.Driver != "mock" {
 		if cfg.Database.URI == "" {
 			return nil, fmt.Errorf("DATABASE_URI is not set, this env variable is required when using a non mock driver")
-		}
-	}
-
-	mustCheck := []string{"JWT_SECRET", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_SECRET"}
-
-	for _, v := range mustCheck {
-		if os.Getenv(v) == "" {
-			return nil, fmt.Errorf("%s is not set, this env variable is required", v)
 		}
 	}
 

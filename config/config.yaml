@@ -7,13 +7,17 @@ rabbitmq:
   requestQueue: test
   responseQueue: response-test
 
+http:
+  port: "8081"
+
 logger:
   level: "debug"
   type: "text"
 
 database:
-  driver: "mock"
+  driver: "mongo"
 
 oauth:
   provider: "github"
-  redirectUrl: "http://localhost:8080/oauth/callback"
+  redirectUri: "http://localhost:8081/api/v1/oauth/callback"
+  callbackUri: "http://localhost:8081/api/v1/oauth/callback"
