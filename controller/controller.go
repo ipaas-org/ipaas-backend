@@ -23,6 +23,9 @@ type Controller struct {
 	jwtHandler     *jwt.JWThandler
 	serviceManager serviceManager.ServiceManager
 	app            config.App
+
+	rabbitUri        string
+	requestQueueName string
 }
 
 func NewBuilderController(config *config.Config, l *logrus.Logger) *Controller {
@@ -43,11 +46,13 @@ func NewBuilderController(config *config.Config, l *logrus.Logger) *Controller {
 	jwtHandler := jwt.NewJWThandler(config.JWT.Secret, config.App.Name+":"+config.App.Version)
 
 	return &Controller{
-		l:              l,
-		oauthService:   provider,
-		jwtHandler:     jwtHandler,
-		serviceManager: serviceManager,
-		app:            config.App,
+		l:                l,
+		oauthService:     provider,
+		jwtHandler:       jwtHandler,
+		serviceManager:   serviceManager,
+		app:              config.App,
+		rabbitUri:        config.RMQ.URI,
+		requestQueueName: config.RMQ.RequestQueue,
 	}
 }
 
