@@ -132,7 +132,10 @@ func (g GithubOauth) GetUserInfo(accessToken string) (model.User, error) {
 	user.GithubAccessToken = accessToken
 
 	//set req to get email
-	req.URL.Parse(emailInfo)
+	req.URL, err = req.URL.Parse(emailInfo)
+	if err != nil {
+		return user, fmt.Errorf("unable to parse email info url: %w", err)
+	}
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		return user, fmt.Errorf("unable to get user email: %w", err)
@@ -144,7 +147,6 @@ func (g GithubOauth) GetUserInfo(accessToken string) (model.User, error) {
 	}
 
 	result := gjson.Get(string(respbody), "#(primary==true).email")
-
 	user.Email = result.String()
 	return user, nil
 }
