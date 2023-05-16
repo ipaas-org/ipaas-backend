@@ -66,9 +66,9 @@ func (j *JWThandler) IsTokenExpired(tokenString string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return claims.ExpiresAt < time.Now().Unix(), nil
+	return j.IsTokenExpiredFromClaims(claims), nil
 }
 
 func (j *JWThandler) IsTokenExpiredFromClaims(claims *JWTClaims) bool {
 	return claims.ExpiresAt < time.Now().Unix()
-}	
+}
