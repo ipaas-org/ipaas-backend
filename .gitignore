@@ -2,7 +2,7 @@
 .env
 
 #docker & docker compose
-ipaas-db-dump/
+_ipaas-db-dump/
 _volume
 
 #npm
