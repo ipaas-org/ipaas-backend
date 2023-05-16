@@ -10,6 +10,13 @@ type (
 		Email             string             `bson:"email" json:"email"`         //github oauth field: email primary
 		Pfp               string             `bson:"pfp" json:"pfp"`             //github oauth field: avatar_url
 		GithubUrl         string             `bson:"githubUrl" json:"githubUrl"` //github oauth field: url
-		GithubAccessToken string             `bson:"githubAccessToken" json:"githubAccessToken"`
+		GithubAccessToken string             `bson:"githubAccessToken" json:"-"`
+		NetworkID         string             `bson:"networkId" json:"networkId"`
+		Role              string             `bson:"role" json:"role"` //defaults to "user"
+		UserSettings      UserSettings       `bson:"userSettings" json:"userSettings"`
+	}
+
+	UserSettings struct {
+		Theme string `bson:"theme" json:"theme"`
 	}
 )
