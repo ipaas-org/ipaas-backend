@@ -8,7 +8,7 @@ rabbitmq:
   responseQueue: response-test
 
 http:
-  port: "8081"
+  port: "8082"
 
 logger:
   level: "debug"
@@ -19,5 +19,5 @@ database:
 
 oauth:
   provider: "github"
-  redirectUri: "http://localhost:8081/api/v1/oauth/callback"
-  callbackUri: "http://localhost:8081/api/v1/oauth/callback"
+  redirectUri: "http://localhost:8082/api/v1/oauth/callback"
+  callbackUri: "http://localhost:8082/api/v1/oauth/callback"
