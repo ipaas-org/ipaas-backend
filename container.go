@@ -15,8 +15,6 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
-	volumeType "github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 )
@@ -181,64 +179,64 @@ func (c ContainerController) GetContainerExternalPort(id, containerPort string) 
 
 // FindVolume searchs a volume by name and returns a pointer to the volume (type volumeType.Volume) and an error.
 // If the volume doesn't exist the volume pointer will be nil
-func (c ContainerController) FindVolume(name string) (volume *types.Volume, err error) {
-	//get all the volumes
-	volumes, err := c.cli.VolumeList(context.Background(), filters.NewArgs())
-	if err != nil {
-		return nil, err
-	}
+// func (c ContainerController) FindVolume(name string) (volume *types.Volume, err error) {
+// 	//get all the volumes
+// 	volumes, err := c.cli.VolumeList(context.Background(), filters.NewArgs())
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	//search the volume with the same name
-	for _, v := range volumes.Volumes {
-		if v.Name == name {
-			return v, nil
-		}
-	}
-	return nil, nil
-}
+// 	//search the volume with the same name
+// 	for _, v := range volumes.Volumes {
+// 		if v.Name == name {
+// 			return v, nil
+// 		}
+// 	}
+// 	return nil, nil
+// }
 
 // EnsureVolume checks if a volume exists, if so returns false, the volume and an error.
 // If it doesn't exist it will be created and the output will be true, the volume and an error
-func (c ContainerController) EnsureVolume(name string) (created bool, volume *types.Volume, err error) {
-	//check if the volume exists (if it doesn't volume will be nil)
-	volume, err = c.FindVolume(name)
-	if err != nil {
-		return false, nil, err
-	}
+// func (c ContainerController) EnsureVolume(name string) (created bool, volume *types.Volume, err error) {
+// 	//check if the volume exists (if it doesn't volume will be nil)
+// 	volume, err = c.FindVolume(name)
+// 	if err != nil {
+// 		return false, nil, err
+// 	}
 
-	if volume != nil {
-		return false, volume, nil
-	}
+// 	if volume != nil {
+// 		return false, volume, nil
+// 	}
 
-	//create the volume given the context and the volume create body struct
-	vol, err := c.cli.VolumeCreate(c.ctx, volumeType.VolumeCreateBody{
-		Driver: "local",
-		Labels: map[string]string{"matricola": "18008", "type": "db", "dbType": "mysql"},
-		Name:   name,
-	})
-	return true, &vol, err
-}
+// 	//create the volume given the context and the volume create body struct
+// 	vol, err := c.cli.VolumeCreate(c.ctx, volumeType.VolumeCreateBody{
+// 		Driver: "local",
+// 		Labels: map[string]string{"matricola": "18008", "type": "db", "dbType": "mysql"},
+// 		Name:   name,
+// 	})
+// 	return true, &vol, err
+// }
 
 // RemoveVolume deletes a volume
-func (c ContainerController) RemoveVolume(name string) (removed bool, err error) {
-	//search the volume
-	vol, err := c.FindVolume(name)
-	if err != nil {
-		return false, err
-	}
+// func (c ContainerController) RemoveVolume(name string) (removed bool, err error) {
+// 	//search the volume
+// 	vol, err := c.FindVolume(name)
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	if vol == nil {
-		return false, nil
-	}
+// 	if vol == nil {
+// 		return false, nil
+// 	}
 
-	//remove the volume
-	err = c.cli.VolumeRemove(context.Background(), name, true)
-	if err != nil {
-		return false, err
-	}
+// 	//remove the volume
+// 	err = c.cli.VolumeRemove(context.Background(), name, true)
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
 // DeleteContainer forcefully removes a container given the container id
 func (c ContainerController) DeleteContainer(containerID string) error {
