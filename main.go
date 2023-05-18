@@ -30,7 +30,9 @@ func main() {
 	l := logger.NewLogger(conf.Log.Level, conf.Log.Type)
 	l.Debug("initizalized logger")
 
-	c := controller.NewBuilderController(conf, l)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c := controller.NewController(ctx, conf, l)
 	l.Debugf("conf: %+v\n", conf)
 
 	switch conf.Database.Driver {
@@ -88,8 +90,6 @@ func main() {
 	if err := rmq.Connect(); err != nil {
 		l.Fatalf("error connecting to rabbitmq: %s", err.Error())
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		rmq.Consume(ctx)

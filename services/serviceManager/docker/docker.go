@@ -18,11 +18,13 @@ type DockerApplicationManager struct {
 	cli *client.Client
 }
 
-func NewDockerApplicationManager() (*DockerApplicationManager, error) {
+func NewDockerApplicationManager(ctx context.Context) (*DockerApplicationManager, error) {
 	c := new(DockerApplicationManager)
 	var err error
 	//creating docker client from env
+
 	c.cli, err = client.NewClientWithOpts(client.FromEnv)
+	c.cli.NegotiateAPIVersion(ctx)
 	if err != nil {
 		return nil, err
 	}

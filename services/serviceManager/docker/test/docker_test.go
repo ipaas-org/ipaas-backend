@@ -9,7 +9,9 @@ import (
 )
 
 func TestCreateNewContainer(t *testing.T) {
-	containerManager, err := docker.NewDockerApplicationManager()
+	ctx := context.Background()
+
+	containerManager, err := docker.NewDockerApplicationManager(ctx)
 	if err != nil {
 		t.Fatalf("error creating containerManager: %v", err)
 	}
@@ -27,7 +29,6 @@ func TestCreateNewContainer(t *testing.T) {
 
 	networkID := "65e0226c67d8e04ef12dd1e046c7d25b0e26db131d028dfaa83852120319ebf3"
 	dnsAlias := "test"
-	ctx := context.Background()
 	id, name, err := containerManager.CreateNewContainer(ctx, "test", image, envs, labels)
 	if err != nil {
 		t.Errorf("error creating the container: %v", err)
