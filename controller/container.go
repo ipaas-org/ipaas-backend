@@ -24,14 +24,17 @@ const (
 // todo: skip this step if it is a database
 func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string) bool {
 	_, err := c.applicationRepo.FindByName(ctx, name)
-	c.l.Debugf("checking if name is available: %s", err.Error())
-	return err == nil || err == repo.ErrNotFound
+	available := err == nil || err == repo.ErrNotFound
+	c.l.Debugf("is name(%s) system available: %t", name, available)
+	return available
 }
 
 // todo: use this function to check if the name is available for a database
 func (c *Controller) IsNameAvailableUserWide(ctx context.Context, name, username string) bool {
 	_, err := c.applicationRepo.FindByNameAndOwnerUsername(ctx, name, username)
-	return err == nil
+	available := err == nil || err == repo.ErrNotFound
+	c.l.Debugf("is name(%s) available for %s: %t", name, username, available)
+	return available
 }
 
 func (c *Controller) CreateNewContainer(ctx context.Context, serviceType serviceType, ownerID, name, image string, env []model.KeyValue) (string, string, error) {
@@ -82,7 +85,6 @@ func (c *Controller) StartContainer(ctx context.Context, id string) error {
 }
 
 func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, image string) error {
-
 	uuid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		c.l.Errorf("error parsing uuid: %v", err)
