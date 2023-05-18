@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"context"
+
 	"github.com/ipaas-org/ipaas-backend/config"
 	"github.com/ipaas-org/ipaas-backend/pkg/jwt"
 	"github.com/ipaas-org/ipaas-backend/repo"
@@ -28,7 +30,7 @@ type Controller struct {
 	requestQueueName string
 }
 
-func NewBuilderController(config *config.Config, l *logrus.Logger) *Controller {
+func NewController(ctx context.Context, config *config.Config, l *logrus.Logger) *Controller {
 	var provider oauth.Oauther
 	switch config.Oauth.Provider {
 	case oauth.ProviderGithub:
@@ -38,13 +40,14 @@ func NewBuilderController(config *config.Config, l *logrus.Logger) *Controller {
 		l.Fatalf("Unknown oauth provider: %s", config.Oauth.Provider)
 	}
 
-	serviceManager, err := docker.NewDockerApplicationManager()
+	serviceManager, err := docker.NewDockerApplicationManager(ctx)
 	if err != nil {
 		l.Fatalf("Failed to create docker service manager: %v", err)
 	}
 
 	jwtHandler := jwt.NewJWThandler(config.JWT.Secret, config.App.Name+":"+config.App.Version)
 
+	l.Infof("sending request on %s queue", config.RMQ.RequestQueue)
 	return &Controller{
 		l:                l,
 		oauthService:     provider,
