@@ -16,9 +16,10 @@ const (
 	StatusStarting = "starting"
 )
 
+// TODO: IMPORTANTE l'user id quando si crea l'immagine non può essere la mail, meglio usare l'id dell'utente o il suo username
 // TODO: non accettare richieste di build image di un applicazione se l'applicazione è già in status pending|updating
 // TODO: setta status dell'applicazione prima di inviare la richiesta di build image (pending|updating)
-func (c *Controller) BuildImage(ctx context.Context, app *model.Application, providerToken string) error {	
+func (c *Controller) BuildImage(ctx context.Context, app *model.Application, providerToken string) error {
 	request := model.BuildRequest{
 		UUID:      app.ID.String(),
 		Token:     providerToken,
