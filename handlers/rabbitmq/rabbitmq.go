@@ -12,24 +12,24 @@ import (
 )
 
 type RabbitMQ struct {
-	l                 *logrus.Logger
-	Error             <-chan error
-	Connection        *amqp.Connection
-	Channel           *amqp.Channel
-	ResponseQueue     amqp.Queue
-	Delivery          <-chan amqp.Delivery
-	uri               string
-	requestQueueName  string
+	l             *logrus.Logger
+	Error         <-chan error
+	Connection    *amqp.Connection
+	Channel       *amqp.Channel
+	ResponseQueue amqp.Queue
+	Delivery      <-chan amqp.Delivery
+	uri           string
+	// requestQueueName  string
 	responseQueueName string
 	Controller        *controller.Controller
 }
 
-func NewRabbitMQ(uri, requestQueue, reponseQueue string, controller *controller.Controller, logger *logrus.Logger) *RabbitMQ {
+func NewRabbitMQ(uri, requestQueue, responseQueue string, controller *controller.Controller, logger *logrus.Logger) *RabbitMQ {
+	logger.Infof("listening on %s for responses", responseQueue)
 	return &RabbitMQ{
 		uri:               uri,
 		l:                 logger,
-		requestQueueName:  requestQueue,
-		responseQueueName: reponseQueue,
+		responseQueueName: responseQueue,
 		Controller:        controller,
 	}
 }
@@ -52,25 +52,13 @@ func (r *RabbitMQ) Connect() error {
 		return fmt.Errorf("r.Channel.Qos: %w", err)
 	}
 
-	r.ResponseQueue, err = r.Channel.QueueDeclare(
+	q, err := r.Channel.QueueDeclare(
 		r.responseQueueName, // name
 		true,                // durable
 		false,               // delete when unused
 		false,               // exclusive
 		false,               // no-wait
 		nil,                 // arguments
-	)
-	if err != nil {
-		return fmt.Errorf("r.Channel.QueueDeclare: %w", err)
-	}
-
-	q, err := r.Channel.QueueDeclare(
-		r.requestQueueName, // name
-		true,               // durable
-		false,              // delete when unused
-		false,              // exclusive
-		false,              // no-wait
-		nil,                // arguments
 	)
 	if err != nil {
 		return fmt.Errorf("r.Channel.QueueDeclare: %w", err)
