@@ -50,7 +50,7 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI(conf.Database.URI))
 		if err != nil {
-			l.Fatalf("error connecting to database: %s", err.Error())
+			l.Fatalf("main - mongo.Connect - error connecting to database: %s", err.Error())
 		}
 		cancel()
 
@@ -82,13 +82,20 @@ func main() {
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		e.Logger.Fatal(e.Start(":" + conf.HTTP.Port))
+		err := e.Start(":" + conf.HTTP.Port)
+		if err != nil {
+			if ctx.Err() != nil {
+				l.Infof("main - e.start - stopping server: %s", ctx.Err().Error())
+				return
+			}
+			l.Fatal("main - e.start - error starting server: ", err.Error())
+		}
 	}()
 
 	rmq := rabbitmq.NewRabbitMQ(conf.RMQ.URI, conf.RMQ.RequestQueue, conf.RMQ.ResponseQueue, c, l)
 
 	if err := rmq.Connect(); err != nil {
-		l.Fatalf("error connecting to rabbitmq: %s", err.Error())
+		l.Fatalf("main - rmq.Connect - error connecting to rabbitmq: %s", err.Error())
 	}
 
 	go func() {
@@ -97,9 +104,12 @@ func main() {
 
 	select {
 	case s := <-interrupt:
-		l.Info("app - Run - signal: " + s.String())
-		e.Close()
+		l.Info("main - signal: " + s.String())
 		cancel()
+		err := e.Shutdown(ctx)
+		if err != nil {
+			l.Error(fmt.Errorf("echo: %w", err))
+		}
 		return
 	// cancel()
 	case err = <-rmq.Error:
