@@ -14,25 +14,38 @@ var (
 	ErrTokenExpired = errors.New("token expired")
 )
 
+func (c *Controller) CreateRefreshToken(ctx context.Context, userEmail string) (model.RefreshToken, error) {
+	ran, err := uuid.NewRandom()
+	if err != nil {
+		return model.RefreshToken{}, err
+	}
+
+	refreshTokenValue := ran.String()
+	var refreshToken model.RefreshToken
+	refreshToken.Token = refreshTokenValue
+	refreshToken.Expiration = time.Now().Add(time.Hour * 24 * 7)
+	refreshToken.UserEmail = userEmail
+
+	return refreshToken, nil
+}
+
 func (c *Controller) GenerateTokenPair(ctx context.Context, userEmail string) (string, string, error) {
 	accessToken, err := c.jwtHandler.GenerateToken(userEmail)
 	if err != nil {
 		return "", "", err
 	}
 
-	ran, err := uuid.NewRandom()
+	refreshToken, err := c.CreateRefreshToken(ctx, userEmail)
 	if err != nil {
 		return "", "", err
 	}
-	refreshTokenValue := ran.String()
-
-	var refreshToken model.RefreshToken
-	refreshToken.Token = refreshTokenValue
-	refreshToken.Expiration = time.Now().Add(time.Hour * 24 * 7)
-	refreshToken.UserEmail = userEmail
 
 	_, err = c.tokenRepo.Insert(ctx, &refreshToken)
-	return accessToken, refreshTokenValue, err
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken.Token, err
 }
 
 func (c *Controller) IsRefreshTokenExpired(ctx context.Context, refreshToken string) (bool, error) {
