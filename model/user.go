@@ -2,6 +2,11 @@ package model
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+const (
+	RoleUser    = "user"
+	RoleTesting = "testing" //used only for unit testing
+)
+
 type (
 	User struct {
 		ID                primitive.ObjectID `bson:"_id" json:"-"`
