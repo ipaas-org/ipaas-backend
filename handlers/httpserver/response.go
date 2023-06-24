@@ -1,6 +1,10 @@
 package httpserver
 
-import "github.com/labstack/echo/v4"
+import (
+	"fmt"
+
+	"github.com/labstack/echo/v4"
+)
 
 // ConnectionID string `json:"connection_id,omitemtpy"`
 type HttpError struct {
@@ -13,13 +17,27 @@ type HttpError struct {
 	ErrorDocUrl string `json:"error_doc_url,omitempty" example:"https://example.com/docs/errors/invalid_id"`
 }
 
-func respError(c echo.Context, code int, message, details, errType string) error {
+func respError(c echo.Context, code int, message, errType, details string) error {
 	h := HttpError{
 		Instance:    c.Request().RequestURI,
 		IsError:     true,
 		Code:        code,
 		Message:     message,
 		Details:     details,
+		ErrorType:   errType,
+		ErrorDocUrl: "https://example.com/docs/errors/" + errType, //could be a map somwhere, just an example for now
+	}
+
+	return c.JSON(code, h)
+}
+
+func respErrorf(c echo.Context, code int, message, errType, details string, args ...string) error {
+	h := HttpError{
+		Instance:    c.Request().RequestURI,
+		IsError:     true,
+		Code:        code,
+		Message:     message,
+		Details:     fmt.Sprintf(details, args),
 		ErrorType:   errType,
 		ErrorDocUrl: "https://example.com/docs/errors/" + errType, //could be a map somwhere, just an example for now
 	}
@@ -43,6 +61,16 @@ func respSuccess(c echo.Context, code int, message string, data ...interface{}) 
 
 	if len(data) > 0 {
 		h.Data = data[0]
+	}
+
+	return c.JSON(code, h)
+}
+
+func respSuccessf(c echo.Context, code int, message string, args ...string) error {
+	h := HttpSuccess{
+		Code:    code,
+		IsError: false,
+		Message: fmt.Sprintf(message, args),
 	}
 
 	return c.JSON(code, h)
