@@ -2,9 +2,14 @@ package controller
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
+)
+
+var (
+	ErrNetworkIDNotSet = errors.New("network id not set")
 )
 
 func (c *Controller) DoesUserExist(ctx context.Context, email string) (bool, error) {
@@ -20,18 +25,21 @@ func (c *Controller) DoesUserExist(ctx context.Context, email string) (bool, err
 
 func (c *Controller) CreateUser(ctx context.Context, user *model.User) error {
 	c.l.Debugf("Creating user %s (name=%q email=%q)", user.Username, user.FullName, user.Email)
-	networkID, err := c.CreateNewNetwork(ctx, user.Username)
-	if err != nil {
-		c.l.Errorf("Error creating network for user %s (name=%q email=%q): %s", user.Username, user.FullName, user.Email, err.Error())
-		return err
+	// networkID, err := c.CreateNewNetwork(ctx, user.Username)
+	// if err != nil {
+	// 	c.l.Errorf("Error creating network for user %s (name=%q email=%q): %s", user.Username, user.FullName, user.Email, err.Error())
+	// 	return err
+	// }
+	if user.NetworkID == "" {
+		return ErrNetworkIDNotSet
 	}
-	user.NetworkID = networkID
-	c.l.Debugf("created new network[%s] for user %s (name=%q email=%q)", networkID, user.Username, user.FullName, user.Email)
 
-	user.Role = RoleUser
+	if user.Role == "" {
+		user.Role = model.RoleUser
+	}
 	user.UserSettings.Theme = "light"
 
-	_, err = c.userRepo.InsertOne(ctx, user)
+	_, err := c.userRepo.InsertOne(ctx, user)
 	if err != nil {
 		c.l.Errorf("Error creating user %s (name=%q email=%q): %s", user.Username, user.FullName, user.Email, err.Error())
 		return err
@@ -44,8 +52,8 @@ func (c *Controller) GetUserFromEmail(ctx context.Context, email string) (*model
 	return c.userRepo.FindByEmail(ctx, email)
 }
 
+// TODO
 func (c *Controller) UpdateUser(ctx context.Context, user *model.User) error {
-	//TODO
 	return nil
 }
 
@@ -64,7 +72,3 @@ func (c *Controller) DeleteUser(ctx context.Context, email string) (bool, error)
 	// c.RemoveNetwork(ctx, user.NetworkID)
 	return false, nil
 }
-
-const (
-	RoleUser = "user"
-)
