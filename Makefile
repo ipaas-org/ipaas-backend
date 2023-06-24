@@ -25,11 +25,11 @@ lint: ### check by golangci linter
 .PHONY: linter-golangci
 
 test: ### run test
-	go test ./controller/tests
+	go test ./controller/test
 .PHONY: test
 
 testv: ### run verbose test
-	go test -v ./controller/tests
+	go test -v ./controller/test
 .PHONY: test
 
 update: ### update dependencies
