@@ -3,10 +3,8 @@ package controller
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
-	"github.com/ipaas-org/ipaas-backend/repo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -16,42 +14,9 @@ const (
 	WebType      serviceType = "web"
 	DatabaseType serviceType = "database"
 
-	StatusCreating = "creating"
-	StatusRunning  = "running"
 )
 
-// todo: is not available when there is a web applpication with the same name
-// todo: skip this step if it is a database
-func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string) bool {
-	_, err := c.applicationRepo.FindByName(ctx, name)
-	available := err == nil || err == repo.ErrNotFound
-	c.l.Debugf("is name(%s) system available: %t", name, available)
-	return available
-}
-
-// todo: use this function to check if the name is available for a database
-func (c *Controller) IsNameAvailableUserWide(ctx context.Context, name, username string) bool {
-	_, err := c.applicationRepo.FindByNameAndOwnerUsername(ctx, name, username)
-	available := err == nil || err == repo.ErrNotFound
-	c.l.Debugf("is name(%s) available for %s: %t", name, username, available)
-	return available
-}
-
 func (c *Controller) CreateNewContainer(ctx context.Context, serviceType serviceType, ownerID, name, image string, env []model.KeyValue) (string, string, error) {
-	application := &model.Application{
-		Name:          name,
-		OwnerUsername: ownerID,
-		Status:        StatusCreating,
-		Type:          string(serviceType),
-		CreatedAt:     time.Now(),
-		Envs:          env,
-	}
-
-	_, err := c.applicationRepo.Insert(ctx, application)
-	if err != nil {
-		return "", "", err
-	}
-
 	labes := []model.KeyValue{
 		{Key: "org.ipaas.service.name", Value: name},
 		{Key: "org.ipaas.service.owner", Value: ownerID},
@@ -84,7 +49,7 @@ func (c *Controller) StartContainer(ctx context.Context, id string) error {
 	return c.serviceManager.StartContainer(ctx, id)
 }
 
-func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, image string) error {
+func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, lastCommitHash, image string) error {
 	uuid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		c.l.Errorf("error parsing uuid: %v", err)
@@ -97,7 +62,8 @@ func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, imag
 		return fmt.Errorf("c.applicationRepo.FindByID: %w", err)
 	}
 
-	containerID, _, err := c.CreateNewContainer(ctx, WebType, app.OwnerUsername, app.Name, app.ImageID, app.Envs)
+	c.l.Debugf("creating new container for application: %+v", app)
+	containerID, _, err := c.CreateNewContainer(ctx, WebType, app.OwnerUsername, app.Name, image, app.Envs)
 	if err != nil {
 		c.l.Errorf("error creating new container: %v", err)
 		return fmt.Errorf("c.CreateNewContainer: %w", err)
@@ -106,10 +72,22 @@ func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, imag
 	app.Status = StatusRunning
 	app.ImageID = image
 	app.ContainerID = containerID
+	app.Type = string(WebType)
+	app.LastCommitHash = lastCommitHash
 
+	c.l.Debugf("container created correctly, updating application status: %+v", app)
 	if _, err := c.applicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application status: %v", err)
 		return fmt.Errorf("c.applicationRepo.UpdateByID: %w", err)
 	}
-	return c.StartContainer(ctx, containerID)
+	c.l.Debug("application status updated correctly")
+	c.l.Debug("starting container")
+	if err := c.StartContainer(ctx, containerID); err != nil {
+		app.Status = StatusFailed
+		c.applicationRepo.UpdateByID(ctx, app, app.ID)
+		c.l.Errorf("error starting container: %v", err)
+		return fmt.Errorf("c.StartContainer: %w", err)
+	}
+
+	return nil
 }
