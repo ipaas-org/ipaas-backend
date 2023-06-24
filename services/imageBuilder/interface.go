@@ -1,5 +1,7 @@
 package imageBuilder
 
+import "github.com/ipaas-org/ipaas-backend/model"
+
 /*
 
 BuildRequest struct {
@@ -16,5 +18,6 @@ BuildRequest struct {
 	}*/
 
 type ImageBuilder interface {
-	BuildImage(uuid, providerToken, userID, repo, branch string) error
+	BuildImage(buildInfo model.BuildRequest) error
+	ValidateImageResponse(response model.BuildResponse) (string, error)
 }
