@@ -1,0 +1,102 @@
+- utente normale | testing
+
+  - funzioni utente
+    - [x] create
+      - [x] oauth
+        - [x] github (email, user info, private public repos, manage hooks)
+    - [x] get info
+      - [x] ouath info
+        - [x] username
+        - [x] email
+        - [x] profile picture
+      - [x] settings
+        - [x] theme
+      - [x] role (user | tester | moderator | admin)
+    - [x] update info
+      - [x] settings
+        - [x] theme
+    - [ ] delete account
+  - funzioni deployments
+    - [ ] create
+      - [ ] database
+        - [ ] set dbms (postgres, mysql, mongo, redis)
+        - [ ] set name (dns per il database, deve essere univoco (per l'utente), dns gestito da kubernetes)
+      - [ ] web
+        - [x] set deployment kind
+          - [x] github
+            - [x] latest commit (default) (branch automatico | manuale) (update automatico)
+            - [ ] tag (automatico (default latest) | manuale)
+            - [ ] release (automatico (default latest) | manuale)
+        - [x] set name (diventa <name>.ipaasapp.<coso paleocapa>, univoco a livello globale) (gestito da traefik e kubernetes)
+        - [x] set port (default 80, it always maps to 80)
+        - [x] set descrizione (default quella di github)
+        - [x] set envs
+          - [x] set env
+            - [x] name
+            - [x] value
+        - [ ] set additional packages (non implementato in questa versione) (funziona solo con nixpacks) (feature flag)
+          - [ ] nix package
+          - [ ] apt package
+    - [ ] get status of depolument by name
+    - [ ] get deployments list
+    - [ ] get deployment
+      - [ ] name (dns)
+      - [ ] descrizione
+      - [ ] can be updated
+      - [ ] status (starting | in review | running (healty | unhealty) | sleeping | crashed | updating | stopped (user action, too many unhealty checks or by moderator/admin (user can not interact with this action)))
+      - [ ] kind (web | database)
+      - [ ] envs
+      - [ ] additional packages (non implementato in questa versione)
+      - [ ] starting command
+      - [ ] healthcheck endpoint
+      - [ ] port
+      - [ ] private | public
+    - [ ] get logs (loki)
+    - [ ] get metrics (non implementato in questa versione)
+    - [ ] get db dumps (non implementato in questa versione)
+    - [ ] update deployment
+      - [ ] web
+        - [ ] update code (automatico | manuale) (deve essere permesso solo se il commit del deployment e quello richiesto sono diversi) => update image (internal)
+        - [ ] update name => update domain
+        - [ ] update envs
+      - [ ] database
+        - [ ] update name => update dns interno per le applicazioni
+        - [ ] regenerate password (new password for root)
+    - [ ] delete deployment
+  - funzioni reports
+    - [ ] get reports list
+    - [ ] get report
+      - [ ] user
+      - [ ] application
+      - [ ] reason
+      - [ ] description
+      - [ ] status (draft (non implementato per ora) | pending | reviewing | accepted | rejected)
+    - [ ] update
+      - se in draft
+        - [ ] user
+        - [ ] application
+        - [ ] reason
+        - [ ] description
+      - se in pending
+        - [ ] description
+    - [ ] delete report (solo se draft | pending)
+
+- moderator (stesse funzionalità di utente normale)
+
+  - [ ] get all reports (pendings)
+  - [ ] select a report (pending => reviewing)
+    - [ ] set application status ( \* => in review)
+  - [ ] accept report (reviewing => accepted)
+  - [ ] reject report (reviewing => rejected)
+  - [ ] block user
+  - [ ] block application
+
+- admin (non ora perchè la sua interfaccia è complicata)
+
+  - [ ] crud
+    - [ ] utenti
+    - [ ] applicazioni (web, no database) (non ha accesso alle variabili d'ambiente)
+    - [ ] feature flags (le feature flags sono gestite su flip-it)
+
+- sys admin
+  il sys admin ha accesso ad ssh al server e può fare tutto quello che vuole
