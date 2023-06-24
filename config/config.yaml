@@ -15,7 +15,7 @@ logger:
   type: "text"
 
 database:
-  driver: "mongo"
+  driver: "debug"
 
 oauth:
   provider: "github"

@@ -59,10 +59,15 @@ type (
 	}
 )
 
-func NewConfig() (*Config, error) {
+func NewConfig(configPath ...string) (*Config, error) {
 	cfg := &Config{}
 
-	if err := godotenv.Load("./config/.env"); err != nil {
+	path := "./config/"
+	if len(configPath) > 0 {
+		path = configPath[0]
+	}
+
+	if err := godotenv.Load(path + ".env"); err != nil {
 		if err.Error() != "open ./config/.env: no such file or directory" {
 			return nil, err
 		} else {
@@ -79,7 +84,7 @@ func NewConfig() (*Config, error) {
 		}
 	}
 
-	if err := cleanenv.ReadConfig("./config/config.yaml", cfg); err != nil {
+	if err := cleanenv.ReadConfig(path+"config.yaml", cfg); err != nil {
 		return nil, fmt.Errorf("config error: %w", err)
 	}
 
