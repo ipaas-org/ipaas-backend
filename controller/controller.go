@@ -6,6 +6,8 @@ import (
 	"github.com/ipaas-org/ipaas-backend/config"
 	"github.com/ipaas-org/ipaas-backend/pkg/jwt"
 	"github.com/ipaas-org/ipaas-backend/repo"
+	"github.com/ipaas-org/ipaas-backend/services/imageBuilder"
+	"github.com/ipaas-org/ipaas-backend/services/imageBuilder/ipaas"
 	"github.com/ipaas-org/ipaas-backend/services/oauth"
 	"github.com/ipaas-org/ipaas-backend/services/oauth/github"
 	"github.com/ipaas-org/ipaas-backend/services/serviceManager"
@@ -25,9 +27,7 @@ type Controller struct {
 	jwtHandler     *jwt.JWThandler
 	serviceManager serviceManager.ServiceManager
 	app            config.App
-
-	rabbitUri        string
-	requestQueueName string
+	imageBuilder   imageBuilder.ImageBuilder
 }
 
 func NewController(ctx context.Context, config *config.Config, l *logrus.Logger) *Controller {
@@ -45,17 +45,18 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 		l.Fatalf("Failed to create docker service manager: %v", err)
 	}
 
+	imageBuilder := ipaas.NewIpaasImageBuilder(config.RMQ.URI, config.RMQ.RequestQueue)
+
 	jwtHandler := jwt.NewJWThandler(config.JWT.Secret, config.App.Name+":"+config.App.Version)
 
 	l.Infof("sending request on %s queue", config.RMQ.RequestQueue)
 	return &Controller{
-		l:                l,
-		oauthService:     provider,
-		jwtHandler:       jwtHandler,
-		serviceManager:   serviceManager,
-		app:              config.App,
-		rabbitUri:        config.RMQ.URI,
-		requestQueueName: config.RMQ.RequestQueue,
+		l:              l,
+		oauthService:   provider,
+		jwtHandler:     jwtHandler,
+		serviceManager: serviceManager,
+		app:            config.App,
+		imageBuilder:   imageBuilder,
 	}
 }
 
