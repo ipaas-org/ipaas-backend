@@ -108,7 +108,7 @@ func (r *RabbitMQ) Consume(ctx context.Context) {
 			if err := json.Unmarshal(d.Body, &response); err != nil {
 				r.l.Error("r.Consume.json.Unmarshal(): %w:", err)
 				r.l.Debug(string(d.Body))
-				if err := d.Ack(false); err != nil {
+				if err := d.Nack(false, false); err != nil {
 					r.l.Error("r.Consume.Nack(): %w:", err)
 				}
 			}
@@ -117,17 +117,24 @@ func (r *RabbitMQ) Consume(ctx context.Context) {
 			imageID, err := r.Controller.ValidateImageResponse(ctx, response)
 			if err != nil {
 				r.l.Error("r.Controller.ValidateImageResponse(): %w:", err)
-				if err := d.Ack(false); err != nil {
+				if err := d.Nack(false, false); err != nil {
 					r.l.Error("r.Consume.Nack(): %w:", err)
 				}
 			}
 
-			if err := r.Controller.CreateContainerFromIDAndImage(ctx, response.UUID, imageID); err != nil {
-				r.l.Error("r.Controller.CreateContainerFromIDAndImage(): %w:", err)
-				if err := d.Ack(false); err != nil {
-					r.l.Error("r.Consume.Nack(): %w:", err)
+			
+
+			if err := r.Controller.CreateContainerFromIDAndImage(ctx, response.UUID, response.LatestCommit, imageID); err != nil {
+				r.l.Errorf("r.Controller.CreateContainerFromIDAndImage(): %w:", err)
+				if err := d.Nack(false, false); err != nil {
+					r.l.Errorf("r.Consume.Nack(): %w:", err)
 				}
 			}
+
+			if err := d.Ack(false); err != nil {
+				r.l.Error("r.Consume.Ack(): %w:", err)
+			}
+			r.l.Info("acknowledged message from rabbitmq")
 		}
 	}
 }
