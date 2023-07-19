@@ -91,7 +91,7 @@ func (r *ApplicationRepoerMongo) FindByOwnerUsername(arg0 context.Context, arg1 
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndTypeAndIsPublicTrue(arg0 context.Context, arg1 string, arg2 string) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndTypeAndIsPublicTrue(arg0 context.Context, arg1 string, arg2 model.ServiceType) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(arg0, bson.M{
 		"$and": []bson.M{
 			{"ownerUsername": arg1},
@@ -112,7 +112,7 @@ func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndTypeAndIsPublicTrue(arg0 
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndTypeAndIsPublicFalse(arg0 context.Context, arg1 string, arg2 string) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndTypeAndIsPublicFalse(arg0 context.Context, arg1 string, arg2 model.ServiceType) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(arg0, bson.M{
 		"$and": []bson.M{
 			{"ownerUsername": arg1},
@@ -153,12 +153,12 @@ func (r *ApplicationRepoerMongo) FindByOwnerUsernameAndIsUpdatableTrue(arg0 cont
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMongo) Insert(arg0 context.Context, arg1 *model.Application) (interface{}, error) {
-	arg1.ID = primitive.NewObjectID()
+func (r *ApplicationRepoerMongo) InsertOne(arg0 context.Context, arg1 *model.Application) (interface{}, error) {
 	result, err := r.collection.InsertOne(arg0, arg1)
 	if err != nil {
 		return nil, err
 	}
+
 	return result.InsertedID, nil
 }
 

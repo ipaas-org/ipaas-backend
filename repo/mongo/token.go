@@ -6,7 +6,6 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -34,8 +33,7 @@ func (r *TokenRepoerMongo) FindByToken(ctx context.Context, token string) (*mode
 	return &entity, nil
 }
 
-func (r *TokenRepoerMongo) Insert(ctx context.Context, token *model.RefreshToken) (interface{}, error) {
-	token.ID = primitive.NewObjectID()
+func (r *TokenRepoerMongo) InsertOne(ctx context.Context, token *model.RefreshToken) (interface{}, error) {
 	result, err := r.collection.InsertOne(ctx, token)
 	if err != nil {
 		return nil, err

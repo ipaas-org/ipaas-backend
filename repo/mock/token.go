@@ -26,8 +26,11 @@ func (r *TokenRepoerMock) FindByToken(ctx context.Context, token string) (*model
 	return entity, nil
 }
 
-func (r *TokenRepoerMock) Insert(ctx context.Context, token *model.RefreshToken) (interface{}, error) {
+func (r *TokenRepoerMock) InsertOne(ctx context.Context, token *model.RefreshToken) (interface{}, error) {
 	id := primitive.NewObjectID()
+	if token.ID != primitive.NilObjectID {
+		id = token.ID
+	}
 	token.ID = id
 	r.storage[token.Token] = token
 	return id, nil

@@ -20,6 +20,9 @@ type UserRepoerMock struct {
 
 func (r *UserRepoerMock) InsertOne(ctx context.Context, user *model.User) (interface{}, error) {
 	id := primitive.NewObjectID()
+	if user.ID != primitive.NilObjectID {
+		id = user.ID
+	}
 	user.ID = id
 	r.storage[id] = user
 	return id, nil

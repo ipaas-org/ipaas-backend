@@ -22,29 +22,12 @@ type UserRepoerMongo struct {
 }
 
 func (r *UserRepoerMongo) InsertOne(ctx context.Context, user *model.User) (interface{}, error) {
-	user.ID = primitive.NewObjectID()
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-	return result.InsertedID, nil
-}
 
-func (r *UserRepoerMongo) UpdateGithubAccessTokenByID(ctx context.Context, githubAccessToken string, id primitive.ObjectID) (bool, error) {
-	result, err := r.collection.UpdateOne(ctx, bson.M{
-		"_id": id,
-	}, bson.M{
-		"$set": bson.M{
-			"githubAccessToken": githubAccessToken,
-		},
-	})
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return false, repo.ErrNotFound
-		}
-		return false, err
-	}
-	return result.ModifiedCount > 0, nil
+	return result.InsertedID, nil
 }
 
 func (r *UserRepoerMongo) FindByID(ctx context.Context, id primitive.ObjectID) (*model.User, error) {
@@ -84,6 +67,23 @@ func (r *UserRepoerMongo) FindByUsername(ctx context.Context, username string) (
 		return nil, err
 	}
 	return &entity, nil
+}
+
+func (r *UserRepoerMongo) UpdateGithubAccessTokenByID(ctx context.Context, githubAccessToken string, id primitive.ObjectID) (bool, error) {
+	result, err := r.collection.UpdateOne(ctx, bson.M{
+		"_id": id,
+	}, bson.M{
+		"$set": bson.M{
+			"githubAccessToken": githubAccessToken,
+		},
+	})
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, repo.ErrNotFound
+		}
+		return false, err
+	}
+	return result.ModifiedCount > 0, nil
 }
 
 func (r *UserRepoerMongo) DeleteByID(ctx context.Context, id primitive.ObjectID) (bool, error) {

@@ -26,8 +26,11 @@ func (r *StateRepoerMock) FindByState(ctx context.Context, state string) (*model
 	return entity, nil
 }
 
-func (r *StateRepoerMock) Insert(ctx context.Context, state *model.State) (interface{}, error) {
+func (r *StateRepoerMock) InsertOne(ctx context.Context, state *model.State) (interface{}, error) {
 	id := primitive.NewObjectID()
+	if state.ID != primitive.NilObjectID {
+		id = state.ID
+	}
 	state.ID = id
 	r.storage[state.State] = state
 	return id, nil

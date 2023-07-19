@@ -37,7 +37,7 @@ func (r *ApplicationRepoerMock) FindByName(arg0 context.Context, arg1 string) (*
 
 func (r *ApplicationRepoerMock) FindByNameAndOwnerUsername(ctx context.Context, name, ownerUsername string) (*model.Application, error) {
 	for _, entity := range r.storage {
-		if entity.Name == name && entity.OwnerUsername == ownerUsername {
+		if entity.Name == name && entity.OwnerEmail == ownerUsername {
 			return entity, nil
 		}
 	}
@@ -46,7 +46,7 @@ func (r *ApplicationRepoerMock) FindByNameAndOwnerUsername(ctx context.Context, 
 
 func (r *ApplicationRepoerMock) FindByContainerID(arg0 context.Context, arg1 string) (*model.Application, error) {
 	for _, entity := range r.storage {
-		if entity.ContainerID == arg1 {
+		if entity.Container.ContainerID == arg1 {
 			return entity, nil
 		}
 	}
@@ -56,27 +56,27 @@ func (r *ApplicationRepoerMock) FindByContainerID(arg0 context.Context, arg1 str
 func (r *ApplicationRepoerMock) FindByOwnerUsername(arg0 context.Context, arg1 string) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
-		if entity.OwnerUsername == arg1 {
+		if entity.OwnerEmail == arg1 {
 			entities = append(entities, entity)
 		}
 	}
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) FindByOwnerUsernameAndTypeAndIsPublicTrue(arg0 context.Context, arg1 string, arg2 string) ([]*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByOwnerUsernameAndTypeAndIsPublicTrue(arg0 context.Context, arg1 string, arg2 model.ServiceType) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
-		if entity.OwnerUsername == arg1 && entity.Type == arg2 && entity.IsPublic {
+		if entity.OwnerEmail == arg1 && entity.Type == arg2 && entity.IsPublic {
 			entities = append(entities, entity)
 		}
 	}
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) FindByOwnerUsernameAndTypeAndIsPublicFalse(arg0 context.Context, arg1 string, arg2 string) ([]*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByOwnerUsernameAndTypeAndIsPublicFalse(arg0 context.Context, arg1 string, arg2 model.ServiceType) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
-		if entity.OwnerUsername == arg1 && entity.Type == arg2 && !entity.IsPublic {
+		if entity.OwnerEmail == arg1 && entity.Type == arg2 && !entity.IsPublic {
 			entities = append(entities, entity)
 		}
 	}
@@ -86,15 +86,18 @@ func (r *ApplicationRepoerMock) FindByOwnerUsernameAndTypeAndIsPublicFalse(arg0 
 func (r *ApplicationRepoerMock) FindByOwnerUsernameAndIsUpdatableTrue(arg0 context.Context, arg1 string) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
-		if entity.OwnerUsername == arg1 && entity.IsUpdatable {
+		if entity.OwnerEmail == arg1 && entity.IsUpdatable {
 			entities = append(entities, entity)
 		}
 	}
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) Insert(arg0 context.Context, arg1 *model.Application) (interface{}, error) {
+func (r *ApplicationRepoerMock) InsertOne(arg0 context.Context, arg1 *model.Application) (interface{}, error) {
 	id := primitive.NewObjectID()
+	if arg1.ID != primitive.NilObjectID {
+		id = arg1.ID
+	}
 	arg1.ID = id
 	r.storage[id] = arg1
 	return id, nil

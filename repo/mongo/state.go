@@ -34,7 +34,7 @@ func (r *StateRepoerMongo) FindByState(ctx context.Context, state string) (*mode
 	return &entity, nil
 }
 
-func (r *StateRepoerMongo) Insert(ctx context.Context, state *model.State) (interface{}, error) {
+func (r *StateRepoerMongo) InsertOne(ctx context.Context, state *model.State) (interface{}, error) {
 	state.ID = primitive.NewObjectID()
 	result, err := r.collection.InsertOne(ctx, state)
 	if err != nil {
