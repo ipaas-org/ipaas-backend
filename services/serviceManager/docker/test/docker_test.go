@@ -16,38 +16,56 @@ func TestCreateNewContainer(t *testing.T) {
 		t.Fatalf("error creating containerManager: %v", err)
 	}
 
-	image := "traefik/whoami:latest"
+	image := "busybox:latest"
 	envs := []model.KeyValue{
 		{Key: "key1", Value: "value1"},
 		{Key: "vano", Value: "vano"},
-		{Key: "test", Value: "test"},
 	}
 
 	labels := []model.KeyValue{
 		{Key: "org.ipaas.service.type", Value: "test"},
 	}
 
-	networkID := "65e0226c67d8e04ef12dd1e046c7d25b0e26db131d028dfaa83852120319ebf3"
-	dnsAlias := "test"
-	id, name, err := containerManager.CreateNewContainer(ctx, "test", image, envs, labels)
+	container, err := containerManager.CreateNewContainer(ctx, image, envs, labels)
 	if err != nil {
 		t.Errorf("error creating the container: %v", err)
 	}
 
-	if err := containerManager.ConnectContainerToNetwork(ctx, id, networkID, dnsAlias); err != nil {
-		t.Errorf("error connecting container to network: %v", err)
+	t.Logf("container id %s and name %s", container.ContainerID, container.Name)
+	//remove the container with id
+	err = containerManager.RemoveContainer(ctx, container)
+	if err != nil {
+		t.Errorf("error removing the container: %v", err)
+	}
+}
+
+func TestStartContainer(t *testing.T) {
+	ctx := context.Background()
+
+	containerManager, err := docker.NewDockerApplicationManager(ctx)
+	if err != nil {
+		t.Fatalf("error creating containerManager: %v", err)
 	}
 
-	err = containerManager.StartContainer(ctx, id)
-	if err != nil {
-		t.Error(err)
+	image := "busybox:latest"
+	labels := []model.KeyValue{
+		{Key: "org.ipaas.service.type", Value: "test"},
 	}
-	t.Logf("container id %s and name %s", id, name)
-	// t.Cleanup(func() {
-	// 	//remove the container with id
-	// 	err := containerManager.RemoveContainer(ctx, id)
-	// 	if err != nil {
-	// 		t.Errorf("error removing the container: %v", err)
-	// 	}
-	// })
+
+	container, err := containerManager.CreateNewContainer(ctx, image, nil, labels)
+	if err != nil {
+		t.Errorf("error creating the container: %v", err)
+	}
+
+	err = containerManager.StartContainer(ctx, container)
+	if err != nil {
+		t.Errorf("error starting the container: %v", err)
+	}
+
+	t.Logf("container id %s and name %s", container.ContainerID, container.Name)
+	//remove the container with id
+	// err = containerManager.RemoveContainer(ctx, container)
+	// if err != nil {
+	// 	t.Errorf("error removing the container: %v", err)
+	// }
 }
