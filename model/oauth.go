@@ -17,18 +17,10 @@ type (
 	}
 
 	State struct {
-		ID             primitive.ObjectID `bson:"_id"`
+		ID             primitive.ObjectID `bson:"_id,omitempty"`
 		State          string             `bson:"state"`
 		Issued         time.Time          `bson:"issDate"`
 		ExpirationDate time.Time          `bson:"expDate"`
-	}
-
-	Polling struct {
-		DBId            primitive.ObjectID `bson:"_id"`
-		RandomId        string             `bson:"id"`
-		IssDate         time.Time          `bson:"issDate"`
-		ExpDate         time.Time          `bson:"expDate"`
-		LoginSuccessful bool               `bson:"loginSuccessful"`
 	}
 )
 

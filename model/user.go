@@ -9,7 +9,7 @@ const (
 
 type (
 	User struct {
-		ID                primitive.ObjectID `bson:"_id" json:"-"`
+		ID                primitive.ObjectID `bson:"_id,omitemtpy" json:"-"`
 		Username          string             `bson:"username" json:"username"`   //github oauth field: login
 		FullName          string             `bson:"name" json:"name"`           //github oauth field: name
 		Email             string             `bson:"email" json:"email"`         //github oauth field: email primary
