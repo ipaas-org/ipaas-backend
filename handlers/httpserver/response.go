@@ -6,6 +6,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const (
+	baseErrDocsUrl = "https://example.com/docs/errors/"
+)
+
 // ConnectionID string `json:"connection_id,omitemtpy"`
 type HttpError struct {
 	Code        int    `json:"code" example:"400"`
@@ -25,7 +29,7 @@ func respError(c echo.Context, code int, message, errType, details string) error
 		Message:     message,
 		Details:     details,
 		ErrorType:   errType,
-		ErrorDocUrl: "https://example.com/docs/errors/" + errType, //could be a map somwhere, just an example for now
+		ErrorDocUrl: baseErrDocsUrl + errType, //could be a map somwhere, just an example for now
 	}
 
 	return c.JSON(code, h)
@@ -39,10 +43,23 @@ func respErrorf(c echo.Context, code int, message, errType, details string, args
 		Message:     message,
 		Details:     fmt.Sprintf(details, args),
 		ErrorType:   errType,
-		ErrorDocUrl: "https://example.com/docs/errors/" + errType, //could be a map somwhere, just an example for now
+		ErrorDocUrl: baseErrDocsUrl + errType, //could be a map somwhere, just an example for now
 	}
 
 	return c.JSON(code, h)
+}
+
+func respErrorFromHttpError(c echo.Context, err *HttpError) error {
+	h := HttpError{
+		Instance:    c.Request().RequestURI,
+		IsError:     true,
+		Code:        err.Code,
+		Message:     err.Message,
+		Details:     err.Details,
+		ErrorType:   err.ErrorType,
+		ErrorDocUrl: baseErrDocsUrl + err.ErrorType,
+	}
+	return c.JSON(err.Code, h)
 }
 
 type HttpSuccess struct {

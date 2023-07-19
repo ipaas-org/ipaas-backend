@@ -22,22 +22,38 @@ import (
 //	@host			localhost:8082
 //	@BasePath		/api/v1
 func InitRouter(e *echo.Echo, l *logrus.Logger, controller *controller.Controller, conf *config.Config) {
-	// e.Use(middleware.Logger())
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogRemoteIP: true,
+		LogMethod:   true,
+		LogURI:      true,
+		LogStatus:   true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			l.WithFields(logrus.Fields{
+				"ip":     v.RemoteIP,
+				"method": v.Method,
+				"uri":    v.URI,
+				"status": v.Status,
+			}).Info("request")
+			return nil
+		},
+	}))
 	e.Use(middleware.Recover())
 
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		Skipper:      middleware.DefaultSkipper,
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	}))
+
 	echo.NotFoundHandler = func(c echo.Context) error {
-		// render your 404 page
-		return respError(c, http.StatusNotFound, "invalid endpoint", fmt.Sprintf("endpoint %s is not handled", c.Request().URL.Path), "invalid_endpoint")
+		return respError(c, http.StatusNotFound, "invalid endpoint", fmt.Sprintf("endpoint %s is not handled, check the documentation", c.Request().URL.Path), "invalid_endpoint")
 	}
 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 	e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
 	api := e.Group("/api/v1")
-	//user routes
 
 	httpHandler := NewHttpHandler(api, controller, l)
 	httpHandler.RegisterRoutes()
-
-	// container := api.Group("/container")
 }
