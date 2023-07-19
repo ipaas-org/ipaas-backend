@@ -2,16 +2,11 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
-)
-
-var (
-	ErrTokenExpired = errors.New("token expired")
 )
 
 func (c *Controller) CreateRefreshToken(ctx context.Context, userEmail string) (model.RefreshToken, error) {
@@ -40,7 +35,7 @@ func (c *Controller) GenerateTokenPair(ctx context.Context, userEmail string) (s
 		return "", "", err
 	}
 
-	_, err = c.tokenRepo.Insert(ctx, &refreshToken)
+	_, err = c.tokenRepo.InsertOne(ctx, &refreshToken)
 	if err != nil {
 		return "", "", err
 	}
@@ -99,3 +94,24 @@ func (c *Controller) GenerateTokenPairFromRefreshToken(ctx context.Context, refr
 // if we store all the tokens then we can also implement a "logout from all devices" feature
 // while if we do it with the blacklist we need to not allow
 // all the tokens issued before the "logout from all devices" to be valid (which is not a bad thing)
+
+func (c *Controller) ValidateAccessTokenAndGetUser(ctx context.Context, accessToken string) (*model.User, error) {
+	claims, err := c.jwtHandler.ValidateToken(accessToken)
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	if c.jwtHandler.IsTokenExpiredFromClaims(claims) {
+		return nil, ErrTokenExpired
+	}
+
+	user, err := c.userRepo.FindByEmail(ctx, claims.UserEmail)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	return user, nil
+}
