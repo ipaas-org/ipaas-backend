@@ -75,8 +75,8 @@ func TestIsNameAvailableUserWide(t *testing.T) {
 	}
 
 	c.InsertApplication(ctx, &model.Application{
-		Name:          name,
-		OwnerUsername: user.Username,
+		Name:       name,
+		OwnerEmail: user.Username,
 	})
 
 	if c.IsNameAvailableUserWide(ctx, name, user.Username) {
