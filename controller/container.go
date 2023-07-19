@@ -8,16 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type serviceType string
-
-const (
-	WebType      serviceType = "web"
-	DatabaseType serviceType = "database"
-
-)
-
-func (c *Controller) CreateNewContainer(ctx context.Context, serviceType serviceType, ownerID, name, image string, env []model.KeyValue) (string, string, error) {
-	labes := []model.KeyValue{
+func (c *Controller) GenerateLabels(name, ownerID string, serviceType model.ServiceType) []model.KeyValue {
+	return []model.KeyValue{
 		{Key: "org.ipaas.service.name", Value: name},
 		{Key: "org.ipaas.service.owner", Value: ownerID},
 		{Key: "org.ipaas.service.type", Value: string(serviceType)},
@@ -25,20 +17,10 @@ func (c *Controller) CreateNewContainer(ctx context.Context, serviceType service
 		{Key: "org.ipaas.name", Value: c.app.Name},
 		{Key: "org.ipaas.deployment", Value: c.app.Deployment},
 	}
-
-	return c.serviceManager.CreateNewContainer(ctx, name, image, env, labes)
 }
 
-func (c *Controller) RemoveNetwork(ctx context.Context, id string) error {
-	return c.serviceManager.RemoveNetwork(ctx, id)
-}
-
-func (c *Controller) CreateNewNetwork(ctx context.Context, name string) (string, error) {
-	return c.serviceManager.CreateNewNetwork(ctx, name)
-}
-
-func (c *Controller) ConnectContainerToNetwork(ctx context.Context, containerID, networkID, dnsAlias string) error {
-	return c.serviceManager.ConnectContainerToNetwork(ctx, containerID, networkID, dnsAlias)
+func (c *Controller) CreateNewContainer(ctx context.Context, serviceType model.ServiceType, ownerID, name, image string, env, labels []model.KeyValue) (string, string, error) {
+	return c.serviceManager.CreateNewContainer(ctx, name, image, env, labels)
 }
 
 func (c *Controller) RemoveContainer(ctx context.Context, id string) error {
@@ -56,14 +38,14 @@ func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, last
 		return fmt.Errorf("primitive.ObjectIDFromHex: %w", err)
 	}
 
-	app, err := c.applicationRepo.FindByID(ctx, uuid)
+	app, err := c.GetApplicationByID(ctx, uuid)
 	if err != nil {
 		c.l.Errorf("error finding application: %v", err)
 		return fmt.Errorf("c.applicationRepo.FindByID: %w", err)
 	}
 
 	c.l.Debugf("creating new container for application: %+v", app)
-	containerID, _, err := c.CreateNewContainer(ctx, WebType, app.OwnerUsername, app.Name, image, app.Envs)
+	containerID, _, err := c.CreateNewContainer(ctx, WebType, app.OwnerEmail, app.Name, image, app.Envs)
 	if err != nil {
 		c.l.Errorf("error creating new container: %v", err)
 		return fmt.Errorf("c.CreateNewContainer: %w", err)
@@ -90,4 +72,18 @@ func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, last
 	}
 
 	return nil
+}
+
+//=========== network ===========
+
+func (c *Controller) RemoveNetwork(ctx context.Context, id string) error {
+	return c.serviceManager.RemoveNetwork(ctx, id)
+}
+
+func (c *Controller) CreateNewNetwork(ctx context.Context, name string) (string, error) {
+	return c.serviceManager.CreateNewNetwork(ctx, name)
+}
+
+func (c *Controller) ConnectContainerToNetwork(ctx context.Context, containerID, networkID, dnsAlias string) error {
+	return c.serviceManager.ConnectContainerToNetwork(ctx, containerID, networkID, dnsAlias)
 }
