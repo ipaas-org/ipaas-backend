@@ -12,31 +12,40 @@ type DbContainerConfig struct {
 	Port  string
 }
 
-type Application struct {
-	ID             primitive.ObjectID `bson:"_id" json:"-"`
-	ContainerID    string             `bson:"containerID" json:"containerID,omitempty"`
-	ImageID        string             `bson:"imageID" json:"imageID,omitempty"`
-	Status         string             `bson:"status" json:"status,omitempty"`
-	OwnerUsername  string             `bson:"ownerUsername" json:"ownerUsername,omitempty"`
-	Type           string             `bson:"type" json:"type,omitempty"`
-	Name           string             `bson:"name" json:"name,omitempty"`
-	Description    string             `bson:"description" json:"description,omitempty"`
-	GithubRepo     string             `bson:"githubRepo,omitemtpy" json:"githubRepo,omitempty"`
-	GithubBranch   string             `bson:"githubBranch,omitemtpy" json:"githubBranch,omitempty"`
-	LastCommitHash string             `bson:"lastCommitHash,omitemtpy" json:"lastCommitHash,omitempty"`
-	Port           string             `bson:"port" json:"port,omitempty"`
-	ExternalPort   string             `bson:"externalPort" json:"externalPort,omitempty"`
-	Lang           string             `bson:"lang" json:"lang,omitempty"`
-	CreatedAt      time.Time          `bson:"createdAt" json:"createdAt,omitempty"`
-	IsPublic       bool               `bson:"isPublic" json:"isPublic"`
-	IsUpdatable    bool               `bson:"isUpdatable,omitempty" json:"isUpdatable"`
-	Img            string             `bson:"img,omitempty" json:"img,omitempty"`
-	Envs           []KeyValue         `bson:"envs,omitempty" json:"envs,omitempty"`
-	Tags           []string           `bson:"tags,omitempty" json:"tags,omitempty"`
-	Stars          []string           `bson:"stars,omitempty" json:"stars,omitempty"`
-}
+type (
+	ServiceType      string
+	ApplicationState string
 
-type KeyValue struct {
-	Key   string `bson:"key" json:"key"`
-	Value string `bson:"value" json:"value"`
+	KeyValue struct {
+		Key   string `bson:"key" json:"key"`
+		Value string `bson:"value" json:"value"`
+	}
+
+	Application struct {
+		ID             primitive.ObjectID `bson:"_id,omitemtpy" json:"-"`
+		Type           ServiceType        `bson:"type" json:"type,omitempty"`
+		Name           string             `bson:"name" json:"name,omitempty"`
+		State          ApplicationState   `bson:"state" json:"state,omitempty"`
+		OwnerEmail     string             `bson:"ownerEmail" json:"ownerEmail,omitempty"`
+		PortToMap      string             `bson:"portToMap" json:"portToMap"`
+		Container      Container          `bson:"container" json:"container,omitempty"`
+		Description    string             `bson:"description,omitemtpy" json:"description,omitempty"`
+		GithubRepo     string             `bson:"githubRepo,omitemtpy" json:"githubRepo,omitempty"`
+		GithubBranch   string             `bson:"githubBranch,omitemtpy" json:"githubBranch,omitempty"`
+		LastCommitHash string             `bson:"lastCommitHash,omitemtpy" json:"lastCommitHash,omitempty"`
+		CreatedAt      time.Time          `bson:"createdAt" json:"createdAt,omitempty"`
+		IsPublic       bool               `bson:"isPublic" json:"isPublic"`
+		IsUpdatable    bool               `bson:"isUpdatable,omitempty" json:"isUpdatable"`
+	}
+)
+
+const (
+	ApplicationTypeWeb      ServiceType = "web"
+	ApplicationTypeDatabase ServiceType = "database"
+
+	ApplicationStateCreated ApplicationState = "created"
+)
+
+func (a ApplicationState) String() string {
+	return string(a)
 }
