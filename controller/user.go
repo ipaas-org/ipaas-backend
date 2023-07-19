@@ -2,14 +2,9 @@ package controller
 
 import (
 	"context"
-	"errors"
 
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
-)
-
-var (
-	ErrNetworkIDNotSet = errors.New("network id not set")
 )
 
 func (c *Controller) DoesUserExist(ctx context.Context, email string) (bool, error) {

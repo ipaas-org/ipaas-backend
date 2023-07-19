@@ -7,10 +7,6 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 )
 
-var (
-	ErrUnableToBuildImageInCurrentState = fmt.Errorf("unable to build image in current state")
-)
-
 // TODO: IMPORTANTE l'user id quando si crea l'immagine non può essere la mail, meglio usare l'id dell'utente o il suo username
 // TODO: non accettare richieste di build image di un applicazione se l'applicazione è già in status pending|updating
 func (c *Controller) BuildImage(ctx context.Context, app *model.Application, providerToken string) error {
@@ -21,7 +17,7 @@ func (c *Controller) BuildImage(ctx context.Context, app *model.Application, pro
 	request := model.BuildRequest{
 		UUID:      app.ID.Hex(),
 		Token:     providerToken,
-		UserID:    app.OwnerUsername,
+		UserID:    app.OwnerEmail,
 		Type:      "repo",
 		Connector: "github",
 		Repo:      app.GithubRepo,

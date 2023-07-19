@@ -19,10 +19,6 @@ const (
 	StatusUpdating = "updating"
 )
 
-var (
-	ErrNameNotAvailable = fmt.Errorf("name is not available")
-)
-
 // todo: is not available when there is a web applpication with the same name
 // todo: skip this step if it is a database
 func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string) bool {
@@ -40,8 +36,8 @@ func (c *Controller) IsNameAvailableUserWide(ctx context.Context, name, username
 	return available
 }
 
-func (c *Controller) DoesApplicationExists(app *model.Application) (bool, error) {
-	_, err := c.applicationRepo.FindByID(context.Background(), app.ID)
+func (c *Controller) DoesApplicationExists(ctx context.Context, app *model.Application) (bool, error) {
+	_, err := c.applicationRepo.FindByID(ctx, app.ID)
 	if err != nil {
 		if err == repo.ErrNotFound {
 			return false, nil
@@ -57,12 +53,11 @@ func (c *Controller) GetApplicationByID(ctx context.Context, id primitive.Object
 
 func (c *Controller) InsertApplication(ctx context.Context, app *model.Application) error {
 	app.Status = StatusCreated
-	id, err := c.applicationRepo.Insert(ctx, app)
+	app.ID = primitive.NewObjectID()
+	_, err := c.applicationRepo.InsertOne(ctx, app)
 	if err != nil {
 		return fmt.Errorf("error inserting application: %v", err)
 	}
-	//convert id to string
-	app.ID = id.(primitive.ObjectID)
 	return nil
 }
 
@@ -74,7 +69,8 @@ func (c *Controller) UpdateApplicationState(ctx context.Context, app *model.Appl
 	return nil
 }
 
-func (c *Controller) CreateNewApplication(ctx context.Context, app *model.Application, providerAccessToken string) error {
+// TODO: check if this function is actually needed or if it's better to just insert and call BuildImage
+func (c *Controller) TOCHECKCreateNewApplication(ctx context.Context, app *model.Application, providerAccessToken string) error {
 	if err := c.InsertApplication(ctx, app); err != nil {
 		return fmt.Errorf("c.InsertApplication: %w", err)
 	}

@@ -17,7 +17,7 @@ func (c *Controller) CreateState() (string, error) {
 }
 
 func (c *Controller) InsertState(ctx context.Context, state string) error {
-	id, err := c.stateRepo.Insert(ctx, &model.State{
+	id, err := c.stateRepo.InsertOne(ctx, &model.State{
 		State:          state,
 		Issued:         time.Now(),
 		ExpirationDate: time.Now().Add(time.Minute * 5),
