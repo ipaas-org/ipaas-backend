@@ -1,3 +1,7 @@
+- stuff
+- [ ] i refresh token devono essere mono uso, una volta usati vanno rimossi dal db
+- [ ] do not use cookies, use authorization header bearer
+
 - utente normale | testing
 
   - funzioni utente
