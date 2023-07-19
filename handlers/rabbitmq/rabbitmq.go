@@ -104,8 +104,8 @@ func (r *RabbitMQ) Consume(ctx context.Context) {
 			r.l.Info("received message from rabbitmq")
 			r.l.Debug(string(d.Body))
 
-			var response model.BuildResponse
-			if err := json.Unmarshal(d.Body, &response); err != nil {
+			response := new(model.BuildResponse)
+			if err := json.Unmarshal(d.Body, response); err != nil {
 				r.l.Error("r.Consume.json.Unmarshal(): %w:", err)
 				r.l.Debug(string(d.Body))
 				if err := d.Nack(false, false); err != nil {
@@ -114,16 +114,16 @@ func (r *RabbitMQ) Consume(ctx context.Context) {
 			}
 
 			r.l.Debug(response)
-			imageID, err := r.Controller.ValidateImageResponse(ctx, response)
-			if err != nil {
-				r.l.Error("r.Controller.ValidateImageResponse(): %w:", err)
+			if response.Error != nil {
+				r.l.Error("r.Controller: error building image", response.Error.Message)
+				r.l.Debug(response.Error.Message)
 				if err := d.Nack(false, false); err != nil {
 					r.l.Error("r.Consume.Nack(): %w:", err)
 				}
 			}
 
-			
 
+			
 			if err := r.Controller.CreateContainerFromIDAndImage(ctx, response.UUID, response.LatestCommit, imageID); err != nil {
 				r.l.Errorf("r.Controller.CreateContainerFromIDAndImage(): %w:", err)
 				if err := d.Nack(false, false); err != nil {
