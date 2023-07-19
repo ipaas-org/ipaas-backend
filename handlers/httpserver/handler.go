@@ -5,21 +5,18 @@ import (
 	"time"
 
 	"github.com/ipaas-org/ipaas-backend/controller"
-	"github.com/ipaas-org/ipaas-backend/repo"
 	"github.com/labstack/echo/v4"
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	ErrUnexpected                       = "unexpected_error"
-	ErrInvalidState                     = "invalid_state"
-	ErrAccessTokenNotFound              = "access_token_not_found"
-	ErrInvalidRequestBody               = "invalid_request_body"
-	ErrNameAlreadyTaken                 = "name_already_taken"
-	ErrUnableToBuildImageInCurrentState = "unable_to_build_image_in_current_state"
-)
-
 type (
+	HttpTokenResponse struct {
+		AccessToken           string    `json:"access_token"`
+		AccessTokenExpiresIn  time.Time `json:"access_token_expires_in"`
+		RefreshToken          string    `json:"refresh_token"`
+		RefreshTokenExpiresIn time.Time `json:"refresh_token_expires_in"`
+	}
+
 	httpHandler struct {
 		e          *echo.Group
 		controller *controller.Controller
@@ -41,51 +38,34 @@ func (h *httpHandler) RegisterRoutes() {
 	h.e.GET("/oauth/callback", h.OauthCallback)
 
 	//authenticated user routes
-	authUser := h.e.Group("/user", h.jwtHeaderCheckerMiddleware)
+	authGroup := h.e.Group("", h.jwtHeaderCheckerMiddleware)
+
+	authUser := authGroup.Group("/user")
 	authUser.GET("/info", h.UserInfo)
 	authUser.POST("/update", h.UpdateUser)
 
 	//deployment routes
-	deployment := h.e.Group("/deployment", h.jwtHeaderCheckerMiddleware)
-	deployment.POST("/web/new", h.NewWebDepolyment, h.jwtHeaderCheckerMiddleware)
+	deployment := authGroup.Group("/deployment")
+	deployment.POST("/web/new", h.NewWebDepolyment)
 }
 
 func (h *httpHandler) Login(c echo.Context) error {
 	ctx := c.Request().Context()
-	//get ipaas-access-token cookie
-	accessToken, err := c.Cookie("ipaas-access-token")
-	if err != nil {
-		uri := h.controller.GenerateLoginUri(ctx)
-		return respSuccess(c, 200, "login uri generated", uri)
-	}
 
-	h.l.Debugf("found access token %s", accessToken.Value)
-	//check if token is valid
-	expired, err := h.controller.IsAccessTokenExpired(ctx, accessToken.Value)
-	if err != nil {
-		h.l.Errorf("error checking if access token is expired: %v", err)
-		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to check access token")
-	}
-	if expired {
-		h.l.Debug("access token expired, generating new login uri")
-		uri := h.controller.GenerateLoginUri(ctx)
-		return respSuccess(c, 200, "login uri generated", uri)
-	}
-
-	//get user from token
-	h.l.Infof("access token is valid, getting user from token")
-	user, err := h.controller.GetUserFromAccessToken(ctx, accessToken.Value)
-	if err != nil {
-		if err == repo.ErrNotFound {
+	user, msgErr := h.ValidateAccessTokenAndGetUser(c)
+	if msgErr != nil {
+		if msgErr.ErrorType == ErrInvalidAccessToken ||
+			msgErr.ErrorType == ErrAccessTokenExpired ||
+			msgErr.ErrorType == ErrUserNotFound {
 			uri := h.controller.GenerateLoginUri(ctx)
 			return respSuccess(c, 200, "login uri generated", uri)
+		} else {
+			h.l.Errorf("unexpected error trying to validate access token and get user: %s", msgErr.Details)
+			return respErrorFromHttpError(c, msgErr)
 		}
-		h.l.Errorf("error getting user from access token: %v", err)
-		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to get user from access token")
 	}
 
 	h.l.Infof("user %s already logged in, redirecting to homepage", user.Email)
-	// return respSuccess(c, 200, "user already logged in, it should go to /home", user)
 	return c.Redirect(http.StatusFound, "/api/v1/info")
 }
 
@@ -106,28 +86,28 @@ func (h *httpHandler) OauthCallback(c echo.Context) error {
 	}
 	h.l.Debug("valid state")
 
-	user, err := h.controller.GetUserFromOauthCode(ctx, code)
-	if err != nil {
-		h.l.Errorf("error getting user from oauth code: %v", err)
+	user, errMsg := h.controller.GetUserFromOauthCode(ctx, code)
+	if errMsg != nil {
+		h.l.Errorf("error getting user from oauth code: %v", errMsg)
 		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to get user from oauth code")
 	}
 
-	found, err := h.controller.DoesUserExist(ctx, user.Email)
-	if err != nil {
-		h.l.Errorf("error checking if the user (%s) already exists: %v", user.Email, err)
+	found, errMsg := h.controller.DoesUserExist(ctx, user.Email)
+	if errMsg != nil {
+		h.l.Errorf("error checking if the user (%s) already exists: %v", user.Email, errMsg)
 		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to check if user exists")
 	}
 	if !found {
 		h.l.Debug("user not found, creating new user")
-		networkID, err := h.controller.CreateNewNetwork(ctx, user.Username)
-		if err != nil {
-			h.l.Errorf("error creating new network: %v", err)
+		networkID, errMsg := h.controller.CreateNewNetwork(ctx, user.Username)
+		if errMsg != nil {
+			h.l.Errorf("error creating new network: %v", errMsg)
 			return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to create new network")
 		}
 		user.NetworkID = networkID
-		err = h.controller.CreateUser(ctx, &user)
-		if err != nil {
-			h.l.Errorf("error creating new user: %v", err)
+		errMsg = h.controller.CreateUser(ctx, &user)
+		if errMsg != nil {
+			h.l.Errorf("error creating new user: %v", errMsg)
 			return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to create new user")
 		}
 	} else {
@@ -135,36 +115,22 @@ func (h *httpHandler) OauthCallback(c echo.Context) error {
 	}
 
 	foundUser, err := h.controller.GetUserFromEmail(ctx, user.Email)
-	if err != nil {
+	if errMsg != nil {
 		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to get user from email")
 	}
 
 	//generate jwt and refresh token
-	jwt, refresh, err := h.controller.GenerateTokenPair(ctx, foundUser.Email)
-	if err != nil {
+	jwt, refresh, errMsg := h.controller.GenerateTokenPair(ctx, foundUser.Email)
+	if errMsg != nil {
 		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to generate token pair")
 	}
 
-	//set cookies
-	cookie := new(http.Cookie)
-	cookie.Name = "ipaas-access-token"
-	cookie.Value = jwt
-	cookie.Expires = time.Now().Add(15 * time.Minute)
-	cookie.Path = "/"
-	cookie.HttpOnly = true
-	cookie.Secure = true
-	cookie.SameSite = http.SameSiteStrictMode
-	c.SetCookie(cookie)
+	resp := HttpTokenResponse{
+		AccessToken:           jwt,
+		AccessTokenExpiresIn:  time.Now().Add(15 * time.Minute),
+		RefreshToken:          refresh,
+		RefreshTokenExpiresIn: time.Now().Add(7 * 24 * time.Hour),
+	}
 
-	cookie = new(http.Cookie)
-	cookie.Name = "ipaas-refresh-token"
-	cookie.Value = refresh
-	cookie.Expires = time.Now().Add(7 * 24 * time.Hour)
-	cookie.Path = "/"
-	cookie.HttpOnly = true
-	cookie.Secure = true
-	cookie.SameSite = http.SameSiteStrictMode
-	c.SetCookie(cookie)
-
-	return respSuccess(c, 200, "successfully logged in")
+	return respSuccess(c, 200, "successfully logged in", resp)
 }
