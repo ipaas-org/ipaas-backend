@@ -1,6 +1,8 @@
 package httpserver
 
 import (
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -42,47 +44,36 @@ type (
 )
 
 func (h *httpHandler) UserInfo(c echo.Context) error {
-	ctx := c.Request().Context()
-	accessToken, err := c.Cookie("ipaas-access-token")
-	if err != nil {
-		return respError(c, 400, "access token not found", "access token not found", "access_token_not_found")
+	user, msgErr := h.ValidateAccessTokenAndGetUser(c)
+	if msgErr != nil {
+		return respErrorFromHttpError(c, msgErr)
 	}
 
-	user, err := h.controller.GetUserFromAccessToken(ctx, accessToken.Value)
-	if err != nil {
-		return respError(c, 500, "unexpected error", "unexpected error trying to get user from access token", "unexpected_error")
-	}
-
-	return respSuccess(c, 200, "user info", user)
+	return respSuccess(c, http.StatusOK, "user info", user)
 }
 
 func (h *httpHandler) UpdateUser(c echo.Context) error {
-	ctx := c.Request().Context()
-	accessToken, err := c.Cookie("ipaas-access-token")
-	if err != nil {
-		return respError(c, 400, "access token not found", "access token not found", "access_token_not_found")
+	user, msgErr := h.ValidateAccessTokenAndGetUser(c)
+	if msgErr != nil {
+		return respErrorFromHttpError(c, msgErr)
 	}
+	ctx := c.Request().Context()
 
 	//get HttpUserSettingsPost from request body
 	var post HttpUserSettingsPost
-	err = c.Bind(&post)
+	err := c.Bind(&post)
 	if err != nil {
-		return respError(c, 400, "invalid request body", "invalid request body", "invalid_request_body")
-	}
-
-	user, err := h.controller.GetUserFromAccessToken(ctx, accessToken.Value)
-	if err != nil {
-		return respError(c, 500, "unexpected error", "unexpected error trying to get user from access token", "unexpected_error")
+		return respError(c, http.StatusBadRequest, "invalid request body", "invalid request body", "invalid_request_body")
 	}
 	if user.UserSettings.Theme == post.Theme {
-		return respSuccess(c, 200, "user info not changed", post.Theme)
+		return respSuccess(c, http.StatusOK, "user info not changed", post.Theme)
 	}
 
 	user.UserSettings.Theme = post.Theme
 	err = h.controller.UpdateUser(ctx, user)
 	if err != nil {
-		return respError(c, 500, "unexpected error", "unexpected error trying to update user", "unexpected_error")
+		return respError(c, http.StatusNotImplemented, "unexpected error", "unexpected error trying to update user", "unexpected_error")
 	}
 
-	return respSuccess(c, 200, "user info updated correctly", post.Theme)
+	return respSuccess(c, http.StatusOK, "user info updated correctly", post.Theme)
 }
