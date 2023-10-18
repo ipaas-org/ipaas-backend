@@ -33,7 +33,10 @@ func (r *UserRepoerMock) UpdateGithubAccessTokenByID(ctx context.Context, github
 	if !ok {
 		return false, repo.ErrNotFound
 	}
-	entity.GithubAccessToken = githubAccessToken
+	if entity.Info == nil {
+		entity.Info = &model.UserInfo{}
+	}
+	entity.Info.GithubAccessToken = githubAccessToken
 	return true, nil
 }
 
@@ -47,7 +50,7 @@ func (r *UserRepoerMock) FindByID(ctx context.Context, id primitive.ObjectID) (*
 
 func (r *UserRepoerMock) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	for _, entity := range r.storage {
-		if entity.Email == email {
+		if entity.Info != nil && entity.Info.Email == email {
 			return entity, nil
 		}
 	}
@@ -56,7 +59,16 @@ func (r *UserRepoerMock) FindByEmail(ctx context.Context, email string) (*model.
 
 func (r *UserRepoerMock) FindByUsername(ctx context.Context, username string) (*model.User, error) {
 	for _, entity := range r.storage {
-		if entity.Username == username {
+		if entity.Info != nil && entity.Info.Username == username {
+			return entity, nil
+		}
+	}
+	return nil, repo.ErrNotFound
+}
+
+func (r *UserRepoerMock) FindByCode(ctx context.Context, userCode string) (*model.User, error) {
+	for _, entity := range r.storage {
+		if entity.Code == userCode {
 			return entity, nil
 		}
 	}
