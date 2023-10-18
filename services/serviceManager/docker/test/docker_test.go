@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/services/serviceManager/docker"
 )
@@ -26,16 +27,19 @@ func TestCreateNewContainer(t *testing.T) {
 		{Key: "org.ipaas.service.type", Value: "test"},
 	}
 
-	container, err := containerManager.CreateNewContainer(ctx, image, envs, labels)
+	rand := uuid.New().String()
+	name := "container-test-" + rand
+
+	container, err := containerManager.CreateNewContainer(ctx, name, image, envs, labels)
 	if err != nil {
-		t.Errorf("error creating the container: %v", err)
+		t.Fatalf("error creating the container: %v", err)
 	}
 
 	t.Logf("container id %s and name %s", container.ContainerID, container.Name)
 	//remove the container with id
-	err = containerManager.RemoveContainer(ctx, container)
+	err = containerManager.RemoveContainerByID(ctx, container.ContainerID)
 	if err != nil {
-		t.Errorf("error removing the container: %v", err)
+		t.Fatalf("error removing the container: %v", err)
 	}
 }
 
@@ -52,14 +56,17 @@ func TestStartContainer(t *testing.T) {
 		{Key: "org.ipaas.service.type", Value: "test"},
 	}
 
-	container, err := containerManager.CreateNewContainer(ctx, image, nil, labels)
+	rand := uuid.New().String()
+	name := "container-test-" + rand
+
+	container, err := containerManager.CreateNewContainer(ctx, name, image, nil, labels)
 	if err != nil {
-		t.Errorf("error creating the container: %v", err)
+		t.Fatalf("error creating the container: %v", err)
 	}
 
-	err = containerManager.StartContainer(ctx, container)
+	err = containerManager.StartContainerByID(ctx, container.ContainerID)
 	if err != nil {
-		t.Errorf("error starting the container: %v", err)
+		t.Fatalf("error starting the container: %v", err)
 	}
 
 	t.Logf("container id %s and name %s", container.ContainerID, container.Name)
