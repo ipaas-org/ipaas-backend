@@ -9,42 +9,48 @@ import (
 	"github.com/ipaas-org/ipaas-backend/repo"
 )
 
-func (c *Controller) CreateRefreshToken(ctx context.Context, userEmail string) (model.RefreshToken, error) {
+// todo: function needs to return pointer
+// todo: function should return only refresh token and not the expiration as it's inside the structure
+func (c *Controller) CreateRefreshToken(ctx context.Context, userEmail string) (model.RefreshToken, time.Time, error) {
+	refreshTokenDuration := time.Hour * 24 * 7
+
 	ran, err := uuid.NewRandom()
 	if err != nil {
-		return model.RefreshToken{}, err
+		return model.RefreshToken{}, time.Time{}, err
 	}
 
 	refreshTokenValue := ran.String()
 	var refreshToken model.RefreshToken
 	refreshToken.Token = refreshTokenValue
-	refreshToken.Expiration = time.Now().Add(time.Hour * 24 * 7)
-	refreshToken.UserEmail = userEmail
+	refreshToken.Expiration = time.Now().Add(refreshTokenDuration)
+	refreshToken.UserCode = userEmail
 
-	return refreshToken, nil
+	return refreshToken, refreshToken.Expiration, nil
 }
 
-func (c *Controller) GenerateTokenPair(ctx context.Context, userEmail string) (string, string, error) {
-	accessToken, err := c.jwtHandler.GenerateToken(userEmail)
+// todo: should add a access token model that has the expiration in it
+// todo: return pointer to access token model and pointer to refresh token
+func (c *Controller) GenerateTokenPair(ctx context.Context, userCode string) (string, time.Time, string, time.Time, error) {
+	accessToken, accessTokenDuration, err := c.jwtHandler.GenerateToken(userCode)
 	if err != nil {
-		return "", "", err
+		return "", time.Time{}, "", time.Time{}, err
 	}
 
-	refreshToken, err := c.CreateRefreshToken(ctx, userEmail)
+	refreshToken, refreshTokenExpiresAt, err := c.CreateRefreshToken(ctx, userCode)
 	if err != nil {
-		return "", "", err
+		return "", time.Time{}, "", time.Time{}, err
 	}
 
-	_, err = c.tokenRepo.InsertOne(ctx, &refreshToken)
+	_, err = c.TokenRepo.InsertOne(ctx, &refreshToken)
 	if err != nil {
-		return "", "", err
+		return "", time.Time{}, "", time.Time{}, err
 	}
 
-	return accessToken, refreshToken.Token, err
+	return accessToken, accessTokenDuration, refreshToken.Token, refreshTokenExpiresAt, err
 }
 
 func (c *Controller) IsRefreshTokenExpired(ctx context.Context, refreshToken string) (bool, error) {
-	token, err := c.tokenRepo.FindByToken(ctx, refreshToken)
+	token, err := c.TokenRepo.FindByToken(ctx, refreshToken)
 	if err != nil {
 		if err == repo.ErrNotFound {
 			return true, nil
@@ -59,41 +65,23 @@ func (c *Controller) IsAccessTokenExpired(ctx context.Context, accessToken strin
 	return c.jwtHandler.IsTokenExpired(accessToken)
 }
 
-func (c *Controller) GetUserFromAccessToken(ctx context.Context, accessToken string) (*model.User, error) {
-	claims, err := c.jwtHandler.ValidateToken(accessToken)
+// todo: should add a access token model that has the expiration in it
+// todo: return pointer to access token model and pointer to refresh token
+func (c *Controller) GenerateTokenPairFromRefreshToken(ctx context.Context, refreshToken string) (string, time.Time, string, time.Time, error) {
+	token, err := c.TokenRepo.FindByToken(ctx, refreshToken)
 	if err != nil {
-		return nil, err
-	}
-
-	if c.jwtHandler.IsTokenExpiredFromClaims(claims) {
-		return nil, ErrTokenExpired
-	}
-
-	return c.userRepo.FindByEmail(ctx, claims.UserEmail)
-}
-
-func (c *Controller) GenerateTokenPairFromRefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
-	token, err := c.tokenRepo.FindByToken(ctx, refreshToken)
-	if err != nil {
-		return "", "", err
+		return "", time.Time{}, "", time.Time{}, err
 	}
 
 	if token.Expiration.Before(time.Now()) {
-		return "", "", ErrTokenExpired
+		return "", time.Time{}, "", time.Time{}, ErrTokenExpired
 	}
 
-	if _, err = c.tokenRepo.DeleteByToken(ctx, refreshToken); err != nil {
-		return "", "", err
+	if _, err = c.TokenRepo.DeleteByToken(ctx, refreshToken); err != nil {
+		return "", time.Time{}, "", time.Time{}, err
 	}
-	return c.GenerateTokenPair(ctx, token.UserEmail)
+	return c.GenerateTokenPair(ctx, token.UserCode)
 }
-
-//TODO: Implement revoke token
-// the refreshToken can easly be deleted but for the access token
-// we either store it in a blacklist or we store all the access tokens in the database.
-// if we store all the tokens then we can also implement a "logout from all devices" feature
-// while if we do it with the blacklist we need to not allow
-// all the tokens issued before the "logout from all devices" to be valid (which is not a bad thing)
 
 func (c *Controller) ValidateAccessTokenAndGetUser(ctx context.Context, accessToken string) (*model.User, error) {
 	claims, err := c.jwtHandler.ValidateToken(accessToken)
@@ -105,7 +93,7 @@ func (c *Controller) ValidateAccessTokenAndGetUser(ctx context.Context, accessTo
 		return nil, ErrTokenExpired
 	}
 
-	user, err := c.userRepo.FindByEmail(ctx, claims.UserEmail)
+	user, err := c.UserRepo.FindByCode(ctx, claims.UserCode)
 	if err != nil {
 		if err == repo.ErrNotFound {
 			return nil, ErrUserNotFound
@@ -115,3 +103,10 @@ func (c *Controller) ValidateAccessTokenAndGetUser(ctx context.Context, accessTo
 
 	return user, nil
 }
+
+//TODO: Implement revoke token
+// the refreshToken can easly be deleted but for the access token
+// we either store it in a blacklist or we store all the access tokens in the database.
+// if we store all the tokens then we can also implement a "logout from all devices" feature
+// while if we do it with the blacklist we need to not allow
+// all the tokens issued before the "logout from all devices" to be valid (which is not a bad thing)
