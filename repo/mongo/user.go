@@ -46,7 +46,7 @@ func (r *UserRepoerMongo) FindByID(ctx context.Context, id primitive.ObjectID) (
 func (r *UserRepoerMongo) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	var entity model.User
 	if err := r.collection.FindOne(ctx, bson.M{
-		"email": email,
+		"userInfo.email": email,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
@@ -59,7 +59,20 @@ func (r *UserRepoerMongo) FindByEmail(ctx context.Context, email string) (*model
 func (r *UserRepoerMongo) FindByUsername(ctx context.Context, username string) (*model.User, error) {
 	var entity model.User
 	if err := r.collection.FindOne(ctx, bson.M{
-		"username": username,
+		"userInfo.username": username,
+	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
+		return nil, err
+	}
+	return &entity, nil
+}
+
+func (r *UserRepoerMongo) FindByCode(ctx context.Context, userCode string) (*model.User, error) {
+	var entity model.User
+	if err := r.collection.FindOne(ctx, bson.M{
+		"code": userCode,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
@@ -74,7 +87,7 @@ func (r *UserRepoerMongo) UpdateGithubAccessTokenByID(ctx context.Context, githu
 		"_id": id,
 	}, bson.M{
 		"$set": bson.M{
-			"githubAccessToken": githubAccessToken,
+			"userInfo. githubAccessToken": githubAccessToken,
 		},
 	})
 	if err != nil {
