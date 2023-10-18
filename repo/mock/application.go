@@ -18,105 +18,105 @@ type ApplicationRepoerMock struct {
 	storage map[primitive.ObjectID]*model.Application
 }
 
-func (r *ApplicationRepoerMock) FindByID(arg0 context.Context, arg1 primitive.ObjectID) (*model.Application, error) {
-	entity, ok := r.storage[arg1]
+func (r *ApplicationRepoerMock) FindByID(ctx context.Context, _id primitive.ObjectID) (*model.Application, error) {
+	entity, ok := r.storage[_id]
 	if ok {
 		return entity, nil
 	}
 	return nil, repo.ErrNotFound
 }
 
-func (r *ApplicationRepoerMock) FindByName(arg0 context.Context, arg1 string) (*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByName(ctx context.Context, name string) (*model.Application, error) {
 	for _, entity := range r.storage {
-		if entity.Name == arg1 {
+		if entity.Name == name {
 			return entity, nil
 		}
 	}
 	return nil, repo.ErrNotFound
 }
 
-func (r *ApplicationRepoerMock) FindByNameAndOwnerUsername(ctx context.Context, name, ownerUsername string) (*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByNameAndOwner(ctx context.Context, name, owner string) (*model.Application, error) {
 	for _, entity := range r.storage {
-		if entity.Name == name && entity.OwnerEmail == ownerUsername {
+		if entity.Name == name && entity.Owner == owner {
 			return entity, nil
 		}
 	}
 	return nil, repo.ErrNotFound
 }
 
-func (r *ApplicationRepoerMock) FindByContainerID(arg0 context.Context, arg1 string) (*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByContainerID(ctx context.Context, containerID string) (*model.Application, error) {
 	for _, entity := range r.storage {
-		if entity.Container.ContainerID == arg1 {
+		if entity.Container != nil && entity.Container.ContainerID == containerID {
 			return entity, nil
 		}
 	}
 	return nil, repo.ErrNotFound
 }
 
-func (r *ApplicationRepoerMock) FindByOwnerUsername(arg0 context.Context, arg1 string) ([]*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByOwner(ctx context.Context, owner string) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
-		if entity.OwnerEmail == arg1 {
+		if entity.Owner == owner {
 			entities = append(entities, entity)
 		}
 	}
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) FindByOwnerUsernameAndTypeAndIsPublicTrue(arg0 context.Context, arg1 string, arg2 model.ServiceType) ([]*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByOwnerAndTypeAndIsPublicTrue(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
-		if entity.OwnerEmail == arg1 && entity.Type == arg2 && entity.IsPublic {
+		if entity.Owner == owner && entity.Kind == serviceType && entity.IsPublic {
 			entities = append(entities, entity)
 		}
 	}
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) FindByOwnerUsernameAndTypeAndIsPublicFalse(arg0 context.Context, arg1 string, arg2 model.ServiceType) ([]*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByOwnerAndTypeAndIsPublicFalse(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
-		if entity.OwnerEmail == arg1 && entity.Type == arg2 && !entity.IsPublic {
+		if entity.Owner == owner && entity.Kind == serviceType && !entity.IsPublic {
 			entities = append(entities, entity)
 		}
 	}
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) FindByOwnerUsernameAndIsUpdatableTrue(arg0 context.Context, arg1 string) ([]*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByOwnerAndIsUpdatableTrue(ctx context.Context, owner string) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
-		if entity.OwnerEmail == arg1 && entity.IsUpdatable {
+		if entity.Owner == owner && entity.IsUpdatable {
 			entities = append(entities, entity)
 		}
 	}
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) InsertOne(arg0 context.Context, arg1 *model.Application) (interface{}, error) {
+func (r *ApplicationRepoerMock) InsertOne(ctx context.Context, application *model.Application) (interface{}, error) {
 	id := primitive.NewObjectID()
-	if arg1.ID != primitive.NilObjectID {
-		id = arg1.ID
+	if application.ID != primitive.NilObjectID {
+		id = application.ID
 	}
-	arg1.ID = id
-	r.storage[id] = arg1
+	application.ID = id
+	r.storage[id] = application
 	return id, nil
 }
 
-func (r *ApplicationRepoerMock) UpdateByID(arg0 context.Context, arg1 *model.Application, arg2 primitive.ObjectID) (bool, error) {
-	_, ok := r.storage[arg2]
+func (r *ApplicationRepoerMock) UpdateByID(ctx context.Context, application *model.Application, _id primitive.ObjectID) (bool, error) {
+	_, ok := r.storage[_id]
 	if !ok {
 		return false, repo.ErrNotFound
 	}
-	r.storage[arg2] = arg1
+	r.storage[_id] = application
 	return true, nil
 }
 
-func (r *ApplicationRepoerMock) DeleteByID(arg0 context.Context, arg1 primitive.ObjectID) (bool, error) {
-	_, ok := r.storage[arg1]
+func (r *ApplicationRepoerMock) DeleteByID(ctx context.Context, _id primitive.ObjectID) (bool, error) {
+	_, ok := r.storage[_id]
 	if !ok {
 		return false, repo.ErrNotFound
 	}
-	delete(r.storage, arg1)
+	delete(r.storage, _id)
 	return true, nil
 }
