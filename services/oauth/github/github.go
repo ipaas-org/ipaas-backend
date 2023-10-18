@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/ipaas-org/ipaas-backend/model"
@@ -106,47 +106,48 @@ func (g GithubOauth) GetAccessTokenFromCode(code string) (string, error) {
 	return ghresp.AccessToken, nil
 }
 
-func (g GithubOauth) GetUserInfo(accessToken string) (model.User, error) {
-	var user model.User
+func (g GithubOauth) GetUserInfo(accessToken string) (*model.UserInfo, error) {
+	info := new(model.UserInfo)
 
 	authorizationHeaderValue := fmt.Sprintf("token %s", accessToken)
 	req, err := http.NewRequest("GET", userInfo, nil)
 	if err != nil {
-		return user, fmt.Errorf("unable to generate user info request: %w", err)
+		return info, fmt.Errorf("unable to generate user info request: %w", err)
 	}
 	req.Header.Set("Authorization", authorizationHeaderValue)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return user, fmt.Errorf("unable to get user info: %w", err)
+		return info, fmt.Errorf("unable to get user info: %w", err)
 	}
 
 	var githubUser OauthUser
 	if err := json.NewDecoder(resp.Body).Decode(&githubUser); err != nil {
-		return user, fmt.Errorf("unable to unmarshal user info response: %w", err)
+		return info, fmt.Errorf("unable to unmarshal user info response: %w", err)
 	}
 
-	user.Username = githubUser.Login
-	user.FullName = githubUser.Name
-	user.GithubUrl = githubUser.URL
-	user.Pfp = githubUser.AvatarURL
-	user.GithubAccessToken = accessToken
+	info.Username = githubUser.Login
+	info.FullName = githubUser.Name
+	info.GithubUrl = githubUser.URL
+	info.Pfp = githubUser.AvatarURL
+	info.GithubAccessToken = accessToken
 
 	//set req to get email
 	req.URL, err = req.URL.Parse(emailInfo)
 	if err != nil {
-		return user, fmt.Errorf("unable to parse email info url: %w", err)
+		return info, fmt.Errorf("unable to parse email info url: %w", err)
 	}
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		return user, fmt.Errorf("unable to get user email: %w", err)
+		return info, fmt.Errorf("unable to get user email: %w", err)
 	}
 
-	respbody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return user, fmt.Errorf("unable to read user email response: %w", err)
+	respbody := new(bytes.Buffer)
+
+	if _, err := io.Copy(respbody, resp.Body); err != nil {
+		return info, fmt.Errorf("unable to read user email response: %w", err)
 	}
 
-	result := gjson.Get(string(respbody), "#(primary==true).email")
-	user.Email = result.String()
-	return user, nil
+	result := gjson.Get(respbody.String(), "#(primary==true).email")
+	info.Email = result.String()
+	return info, nil
 }

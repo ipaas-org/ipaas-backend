@@ -9,5 +9,5 @@ const (
 type Oauther interface {
 	GenerateLoginRedirectUri(state string) string
 	GetAccessTokenFromCode(code string) (string, error)
-	GetUserInfo(accessToken string) (model.User, error)
+	GetUserInfo(accessToken string) (*model.UserInfo, error)
 }
