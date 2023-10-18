@@ -5,8 +5,12 @@ import (
 	"time"
 
 	"github.com/ipaas-org/ipaas-backend/controller"
+	"github.com/ipaas-org/ipaas-backend/model"
+	"github.com/ipaas-org/ipaas-backend/repo"
 	"github.com/labstack/echo/v4"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
+	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
 type (
@@ -17,28 +21,39 @@ type (
 		RefreshTokenExpiresIn time.Time `json:"refresh_token_expires_in"`
 	}
 
+	HttpRefreshTokensRequest struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
 	httpHandler struct {
-		e          *echo.Group
+		e          *echo.Echo
 		controller *controller.Controller
 		l          *logrus.Logger
+		Done       chan struct{}
 	}
 )
 
-func NewHttpHandler(e *echo.Group, c *controller.Controller, l *logrus.Logger) *httpHandler {
+func NewHttpHandler(e *echo.Echo, c *controller.Controller, l *logrus.Logger) *httpHandler {
 	return &httpHandler{
 		e:          e,
 		controller: c,
 		l:          l,
+		Done:       make(chan struct{}),
 	}
 }
 
 // Registers only the routes and links functions
 func (h *httpHandler) RegisterRoutes() {
-	h.e.GET("/login", h.Login)
-	h.e.GET("/oauth/callback", h.OauthCallback)
+	h.e.GET("/swagger/*", echoSwagger.WrapHandler)
+	h.e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
 
+	api := h.e.Group("/api/v1")
+
+	api.GET("/login", h.Login)
+	api.GET("/oauth/callback", h.OauthCallback)
+	api.POST("/token/refresh", h.RefreshTokens)
 	//authenticated user routes
-	authGroup := h.e.Group("", h.jwtHeaderCheckerMiddleware)
+	authGroup := api.Group("", h.jwtHeaderCheckerMiddleware)
 
 	authUser := authGroup.Group("/user")
 	authUser.GET("/info", h.UserInfo)
@@ -46,7 +61,44 @@ func (h *httpHandler) RegisterRoutes() {
 
 	//deployment routes
 	deployment := authGroup.Group("/deployment")
-	deployment.POST("/web/new", h.NewWebDepolyment)
+
+	webDeployment := deployment.Group("/web")
+	webDeployment.POST("/new", h.NewWebDepolyment)
+
+	dbDeployment := deployment.Group("/db")
+	dbDeployment.POST("/new", h.NewDbDeployment)
+}
+
+func (h *httpHandler) RefreshTokens(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	req := new(HttpRefreshTokensRequest)
+	if err := c.Bind(req); err != nil {
+		h.l.Errorf("error binding body: %v", err)
+		return respError(c, 400, "invalid request body", ErrInvalidRequestBody, "invalid request body")
+	}
+
+	h.l.Debugf("refresh token: %s", req.RefreshToken)
+	jwt, jwtExpiresAt, refresh, refreshExpiresAt, err := h.controller.GenerateTokenPairFromRefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		switch err {
+		case repo.ErrNotFound:
+			return respError(c, 400, "invalid refresh token", ErrInvalidRefreshToken, "invalid refresh token")
+		case controller.ErrTokenExpired:
+			return respError(c, 400, "expired refresh token", ErrRefreshTokenExpired, "refresh token is expired, please login again")
+		}
+		h.l.Errorf("error generating token pair from refresh token: %v", err)
+		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to generate token pair from refresh token")
+	}
+
+	resp := HttpTokenResponse{
+		AccessToken:           jwt,
+		AccessTokenExpiresIn:  jwtExpiresAt,
+		RefreshToken:          refresh,
+		RefreshTokenExpiresIn: refreshExpiresAt,
+	}
+
+	return respSuccess(c, 200, "successfully refreshed tokens", resp)
 }
 
 func (h *httpHandler) Login(c echo.Context) error {
@@ -54,19 +106,16 @@ func (h *httpHandler) Login(c echo.Context) error {
 
 	user, msgErr := h.ValidateAccessTokenAndGetUser(c)
 	if msgErr != nil {
-		if msgErr.ErrorType == ErrInvalidAccessToken ||
-			msgErr.ErrorType == ErrAccessTokenExpired ||
-			msgErr.ErrorType == ErrUserNotFound {
-			uri := h.controller.GenerateLoginUri(ctx)
-			return respSuccess(c, 200, "login uri generated", uri)
-		} else {
+		if msgErr.ErrorType == ErrUnexpected {
 			h.l.Errorf("unexpected error trying to validate access token and get user: %s", msgErr.Details)
 			return respErrorFromHttpError(c, msgErr)
 		}
+		uri := h.controller.GenerateLoginUri(ctx)
+		return respSuccess(c, 200, "login uri generated", uri)
 	}
 
-	h.l.Infof("user %s already logged in, redirecting to homepage", user.Email)
-	return c.Redirect(http.StatusFound, "/api/v1/info")
+	h.l.Infof("user %v already logged in, redirecting to homepage", user)
+	return c.Redirect(http.StatusFound, "/api/v1/user/info")
 }
 
 // TODO: check if username has changed and if the email is the same, if so update the username
@@ -86,50 +135,61 @@ func (h *httpHandler) OauthCallback(c echo.Context) error {
 	}
 	h.l.Debug("valid state")
 
-	user, errMsg := h.controller.GetUserFromOauthCode(ctx, code)
-	if errMsg != nil {
-		h.l.Errorf("error getting user from oauth code: %v", errMsg)
+	info, err := h.controller.GetUserInfoFromOauthCode(ctx, code)
+	if err != nil {
+		h.l.Errorf("error getting user from oauth code: %v", err)
 		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to get user from oauth code")
 	}
 
-	found, errMsg := h.controller.DoesUserExist(ctx, user.Email)
-	if errMsg != nil {
-		h.l.Errorf("error checking if the user (%s) already exists: %v", user.Email, errMsg)
-		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to check if user exists")
+	found := true
+	user, err := h.controller.GetUserFromEmail(ctx, info.Email)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			found = false
+		} else {
+			h.l.Errorf("error getting user from email: %v", err)
+			return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to get user from email")
+		}
 	}
+
 	if !found {
-		h.l.Debug("user not found, creating new user")
-		networkID, errMsg := h.controller.CreateNewNetwork(ctx, user.Username)
-		if errMsg != nil {
-			h.l.Errorf("error creating new network: %v", errMsg)
+		h.l.Infof("user [%s] not found, creating new user", info.Email)
+		user = new(model.User)
+		user.Info = info
+		userCode, err := h.controller.CreateNewUserCode(ctx)
+		if err != nil {
+			h.l.Errorf("error creating new user code: %v", err)
+			return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to create new user code")
+		}
+		user.Code = userCode
+
+		networkID, err := h.controller.CreateNewNetwork(ctx, userCode)
+		if err != nil {
+			h.l.Errorf("error creating new network: %v", err)
 			return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to create new network")
 		}
 		user.NetworkID = networkID
-		errMsg = h.controller.CreateUser(ctx, &user)
-		if errMsg != nil {
-			h.l.Errorf("error creating new user: %v", errMsg)
+
+		err = h.controller.CreateUser(ctx, user)
+		if err != nil {
+			h.l.Errorf("error creating new user: %v", err)
 			return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to create new user")
 		}
 	} else {
-		h.l.Debugf("user %s (name=%s email=%s)  already exists", user.Username, user.FullName, user.Email)
-	}
-
-	foundUser, err := h.controller.GetUserFromEmail(ctx, user.Email)
-	if errMsg != nil {
-		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to get user from email")
+		h.l.Debugf("user %v  already exists", user)
 	}
 
 	//generate jwt and refresh token
-	jwt, refresh, errMsg := h.controller.GenerateTokenPair(ctx, foundUser.Email)
-	if errMsg != nil {
+	jwt, jwtExpiresAt, refresh, refreshExpiresAt, err := h.controller.GenerateTokenPair(ctx, user.Code)
+	if err != nil {
 		return respError(c, 500, "unexpected error", ErrUnexpected, "unexpected error trying to generate token pair")
 	}
 
 	resp := HttpTokenResponse{
 		AccessToken:           jwt,
-		AccessTokenExpiresIn:  time.Now().Add(15 * time.Minute),
+		AccessTokenExpiresIn:  jwtExpiresAt,
 		RefreshToken:          refresh,
-		RefreshTokenExpiresIn: time.Now().Add(7 * 24 * time.Hour),
+		RefreshTokenExpiresIn: refreshExpiresAt,
 	}
 
 	return respSuccess(c, 200, "successfully logged in", resp)
