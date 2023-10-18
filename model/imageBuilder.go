@@ -2,22 +2,19 @@ package model
 
 type (
 	BuildResponse struct {
-		UUID         string      `json:"uuid"`
-		Repo         string      `json:"repo"`
-		Status       string      `json:"status"` // success | failed
-		ImageID      string      `json:"imageID"`
-		ImageName    string      `json:"imageName"`
-		LatestCommit string      `json:"latestCommit"`
-		Error        *BuildError `json:"error"`
-		Metadata     map[string][]string
+		UUID        string             `json:"uuid"` // same uuid from the request
+		Repo        string             `json:"repo"`
+		Status      ResponseStatus     `json:"status"` // success | failed
+		ImageID     string             `json:"imageID"`
+		ImageName   string             `json:"imageName"`
+		BuiltCommit string             `json:"buildCommit"`
+		IsError     bool               `json:"isError"`
+		Fault       ResponseErrorFault `json:"fault"` // service | user
+		Message     string             `json:"message"`
 	}
 
-	BuildError struct {
-		Fault string `json:"fault"` // service | user
-		// if user's fault this message will be the reason why the image didnt compile
-		//otherwise it will be the service error
-		Message string `json:"message"`
-	}
+	ResponseStatus     string
+	ResponseErrorFault string
 
 	BuildRequest struct {
 		UUID      string `json:"uuid"` // given by the client
@@ -31,4 +28,12 @@ type (
 		Release   string `json:"release,omitempty"`
 		// Binary     string `json:"binary, omitempty"`
 	}
+)
+
+const (
+	ResponseStatusSuccess ResponseStatus = "success"
+	ResponseStatusFailed  ResponseStatus = "failed"
+
+	ResponseErrorFaultService ResponseErrorFault = "service"
+	ResponseErrorFaultUser    ResponseErrorFault = "user"
 )
