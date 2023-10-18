@@ -17,7 +17,7 @@ func (c *Controller) CreateState() (string, error) {
 }
 
 func (c *Controller) InsertState(ctx context.Context, state string) error {
-	id, err := c.stateRepo.InsertOne(ctx, &model.State{
+	id, err := c.StateRepo.InsertOne(ctx, &model.State{
 		State:          state,
 		Issued:         time.Now(),
 		ExpirationDate: time.Now().Add(time.Minute * 5),
@@ -32,7 +32,7 @@ func (c *Controller) InsertState(ctx context.Context, state string) error {
 }
 
 func (c *Controller) CheckState(ctx context.Context, state string) (bool, error) {
-	return c.stateRepo.DeleteByState(ctx, state)
+	return c.StateRepo.DeleteByState(ctx, state)
 }
 
 func (c *Controller) GenerateLoginUri(ctx context.Context) string {
@@ -49,17 +49,17 @@ func (c *Controller) GenerateLoginUri(ctx context.Context) string {
 	return c.oauthService.GenerateLoginRedirectUri(state)
 }
 
-func (c *Controller) GetUserFromOauthCode(ctx context.Context, code string) (model.User, error) {
+func (c *Controller) GetUserInfoFromOauthCode(ctx context.Context, code string) (*model.UserInfo, error) {
 	accessToken, err := c.oauthService.GetAccessTokenFromCode(code)
 	if err != nil {
 		c.l.Errorf("Error getting access token from code: %s", err.Error())
-		return model.User{}, err
+		return nil, err
 	}
 
 	user, err := c.oauthService.GetUserInfo(accessToken)
 	if err != nil {
 		c.l.Errorf("Error getting user info: %s", err.Error())
-		return model.User{}, err
+		return nil, err
 	}
 
 	return user, nil
