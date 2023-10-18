@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"github.com/joho/godotenv"
@@ -32,11 +33,12 @@ type (
 	}
 
 	JWT struct {
-		Secret string `env:"JWT_SECRET"`
+		Secret   string        `env-required:"true" env:"JWT_SECRET"`
+		Duration time.Duration `yaml:"duration" env:"JWT_DURATION"`
 	}
 
 	Oauth struct {
-		Provider     string `env-required:"true" yaml:"provider"     env:"OAUTH_PROVIDER"`
+		Provider     string `env-required:"true" yaml:"provider"    env:"OAUTH_PROVIDER"`
 		RedirectUri  string `env-required:"true" yaml:"redirectUri" env:"OAUTH_REDIRECT_URI"`
 		CallbackUri  string `env-required:"true" yaml:"callbackUri" env:"OAUTH_CALLBACK_URI"`
 		ClientId     string `env:"OAUTH_CLIENT_ID"`
@@ -54,21 +56,21 @@ type (
 	}
 
 	Database struct {
-		Driver string `env-required:"true"  yaml:"driver" env:"DATABASE_DRIVER"`
+		Driver string `env-required:"true" yaml:"driver" env:"DATABASE_DRIVER"`
 		URI    string `env:"DATABASE_URI"`
 	}
 )
 
 func NewConfig(configPath ...string) (*Config, error) {
-	cfg := &Config{}
+	cfg := new(Config)
 
-	path := "./config/"
+	path := "./"
 	if len(configPath) > 0 {
 		path = configPath[0]
 	}
 
 	if err := godotenv.Load(path + ".env"); err != nil {
-		if err.Error() != "open ./config/.env: no such file or directory" {
+		if err.Error() != "open "+path+".env: no such file or directory" {
 			return nil, err
 		} else {
 			logrus.Warn(".env file not found, using env variables")
@@ -84,7 +86,7 @@ func NewConfig(configPath ...string) (*Config, error) {
 		}
 	}
 
-	if err := cleanenv.ReadConfig(path+"config.yaml", cfg); err != nil {
+	if err := cleanenv.ReadConfig(path+"config.yml", cfg); err != nil {
 		return nil, fmt.Errorf("config error: %w", err)
 	}
 
