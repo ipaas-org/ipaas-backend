@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -19,6 +18,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+const (
+	gracefulShutdownTimeout = 15 * time.Second
+)
+
+const (
+	StartHTTPHandler int = iota + 1
+	StartRMQHandler
+	StartDatabaseCleanupHandler
 )
 
 func main() {
@@ -38,10 +47,10 @@ func main() {
 	switch conf.Database.Driver {
 	case "mock":
 		l.Info("using mock database")
-		c.SetUserRepo(mock.NewUserRepoer())
-		c.SetTokenRepo(mock.NewTokenRepoer())
-		c.SetStateRepo(mock.NewStateRepoer())
-		c.SetApplicationRepo(mock.NewApplicationRepoer())
+		c.UserRepo = mock.NewUserRepoer()
+		c.TokenRepo = mock.NewTokenRepoer()
+		c.StateRepo = mock.NewStateRepoer()
+		c.ApplicationRepo = mock.NewApplicationRepoer()
 
 	case "mongo":
 		l.Info("using mongo database")
@@ -57,63 +66,82 @@ func main() {
 		l.Debug("connecting to user collection")
 		userCollection := client.Database("ipaas").Collection("user")
 		userRepo := mongoRepo.NewUserRepoer(userCollection)
-		c.SetUserRepo(userRepo)
+		c.UserRepo = userRepo
 
 		l.Debug("connecting to token collection")
 		tokenCollection := client.Database("ipaas").Collection("token")
 		tokenRepo := mongoRepo.NewTokenRepoer(tokenCollection)
-		c.SetTokenRepo(tokenRepo)
+		c.TokenRepo = tokenRepo
 
 		l.Debug("connecting to state collection")
 		stateCollection := client.Database("ipaas").Collection("state")
 		stateRepo := mongoRepo.NewStateRepoer(stateCollection)
-		c.SetStateRepo(stateRepo)
+		c.StateRepo = stateRepo
 
 		l.Debug("connecting to application collection")
 		applicationCollection := client.Database("ipaas").Collection("application")
 		applicationRepo := mongoRepo.NewApplicationRepoer(applicationCollection)
-		c.SetApplicationRepo(applicationRepo)
+		c.ApplicationRepo = applicationRepo
+	default:
+		l.Fatalf("main - unknown database driver: %s", conf.Database.Driver)
 	}
 
 	e := echo.New()
-	httpserver.InitRouter(e, l, c, conf)
-
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		err := e.Start(":" + conf.HTTP.Port)
-		if err != nil {
-			if ctx.Err() != nil {
-				l.Infof("main - e.start - stopping server: %s", ctx.Err().Error())
-				return
-			}
-			l.Fatal("main - e.start - error starting server: ", err.Error())
-		}
-	}()
+	httpHandler := httpserver.InitRouter(e, l, c, conf)
 
 	rmq := rabbitmq.NewRabbitMQ(conf.RMQ.URI, conf.RMQ.RequestQueue, conf.RMQ.ResponseQueue, c, l)
-
 	if err := rmq.Connect(); err != nil {
 		l.Fatalf("main - rmq.Connect - error connecting to rabbitmq: %s", err.Error())
 	}
 
-	go func() {
-		rmq.Consume(ctx)
-	}()
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt,
+		syscall.SIGINT,
+		syscall.SIGQUIT,
+		syscall.SIGABRT,
+		syscall.SIGTERM)
+	RoutineMonitor := make(chan int, 100)
+	RoutineMonitor <- StartHTTPHandler
+	RoutineMonitor <- StartRMQHandler
 
-	select {
-	case s := <-interrupt:
-		l.Info("main - signal: " + s.String())
-		cancel()
-		err := e.Shutdown(ctx)
-		if err != nil {
-			l.Error(fmt.Errorf("echo: %w", err))
+	for {
+		select {
+		case i := <-interrupt:
+			l.Info("main - signal: " + i.String())
+			l.Info("main - canceling context")
+			cancel()
+			gracefulTimer := time.Tick(gracefulShutdownTimeout)
+			//TODO: this is wrong, it needs to check both rmq and httphandler are done
+			select {
+			case <-gracefulTimer:
+				l.Info("main - graceful shutdown timeout reached, exiting with status 1")
+				os.Exit(1)
+			case <-rmq.Done:
+				l.Info("main - rabbitmq finished")
+			case <-httpHandler.Done:
+				l.Info("main - http handler finished")
+			}
+			//returns 0 because the shutdown was successful
+			os.Exit(0)
+		case err = <-rmq.Error:
+			l.Errorf("rabbitmq handler error: %v", err)
+		default:
 		}
-		return
-	// cancel()
-	case err = <-rmq.Error:
-		l.Error(fmt.Errorf("rabbitmq: %w", err))
+
+		select {
+		case ID := <-RoutineMonitor:
+			l.Infof("Starting Routine: %d", ID)
+			switch ID {
+			case StartRMQHandler:
+				go rmq.Start(ctx, StartRMQHandler, RoutineMonitor)
+			case StartHTTPHandler:
+				go httpserver.StartRouter(ctx, httpHandler, conf, StartHTTPHandler, RoutineMonitor)
+			default:
+			}
+		default:
+		}
+
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
