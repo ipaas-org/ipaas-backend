@@ -18,10 +18,10 @@ import (
 type Controller struct {
 	l *logrus.Logger
 
-	userRepo        repo.UserRepoer
-	tokenRepo       repo.TokenRepoer
-	stateRepo       repo.StateRepoer
-	applicationRepo repo.ApplicationRepoer
+	UserRepo        repo.UserRepoer
+	TokenRepo       repo.TokenRepoer
+	StateRepo       repo.StateRepoer
+	ApplicationRepo repo.ApplicationRepoer
 
 	oauthService   oauth.Oauther
 	jwtHandler     *jwt.JWThandler
@@ -47,7 +47,11 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 
 	imageBuilder := ipaas.NewIpaasImageBuilder(config.RMQ.URI, config.RMQ.RequestQueue)
 
-	jwtHandler := jwt.NewJWThandler(config.JWT.Secret, config.App.Name+":"+config.App.Version)
+	if config.JWT.Duration == 0 {
+		config.JWT.Duration = jwt.DefaultExpirationTime
+	}
+	l.Info("jwt expiration is:", config.JWT.Duration)
+	jwtHandler := jwt.NewJWThandler(config.JWT.Secret, config.App.Name+":"+config.App.Version, config.JWT.Duration)
 
 	l.Infof("sending request on %s queue", config.RMQ.RequestQueue)
 	return &Controller{
@@ -58,20 +62,4 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 		app:            config.App,
 		imageBuilder:   imageBuilder,
 	}
-}
-
-func (c *Controller) SetUserRepo(userRepo repo.UserRepoer) {
-	c.userRepo = userRepo
-}
-
-func (c *Controller) SetTokenRepo(tokenRepo repo.TokenRepoer) {
-	c.tokenRepo = tokenRepo
-}
-
-func (c *Controller) SetStateRepo(stateRepo repo.StateRepoer) {
-	c.stateRepo = stateRepo
-}
-
-func (c *Controller) SetApplicationRepo(applicationRepo repo.ApplicationRepoer) {
-	c.applicationRepo = applicationRepo
 }
