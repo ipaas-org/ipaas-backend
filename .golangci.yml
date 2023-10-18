@@ -1,0 +1,5 @@
+run:
+  skip-dirs:
+    - node_modules
+    - .devcontainer/
+    - _volume*/

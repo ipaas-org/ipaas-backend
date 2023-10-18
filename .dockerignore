@@ -1,2 +1,11 @@
 tmp/*
 ipaas-db-dump/
+volume/
+todo.md
+readme.md
+package*
+node_modules/
+.devcontainer
+.env.*
+langs.json
+Makefile

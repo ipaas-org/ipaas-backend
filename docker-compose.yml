@@ -1,32 +1,32 @@
 version: "2.3"
 
 services:
-    # go:
-    #   # container_name: go
-    #   image: go
-    #   restart: always
-    #   build:
-    #     context: .
-    #     dockerfile: Dockerfile
-    #   links:
-    #     - db
-    #   ports:
-    #     - "80:8080"
-    #   networks:
-    #     - "ipaas"
-    db:
-      image: mongo:4.4.6
-      #restart: always
-      environment:
-        MONGO_INITDB_ROOT_USERNAME: vano
-        MONGO_INITDB_ROOT_PASSWORD: vanovano
-        MONGO_INITDB_DATABASE: ipaas
-      ports:
-        - 27017:27017
-      volumes:
-        - ./_ipaas-db-dump:/data/db
-      networks:
-        - "ipaas"
+  # go:
+  #   # container_name: go
+  #   image: go
+  #   restart: always
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   links:
+  #     - db
+  #   ports:
+  #     - "80:8080"
+  #   networks:
+  #     - "ipaas"
+  db:
+    image: mongo:4.4.6
+    #restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: vano
+      MONGO_INITDB_ROOT_PASSWORD: vanovano
+      MONGO_INITDB_DATABASE: ipaas
+    ports:
+      - 27017:27017
+    volumes:
+      - ./_volume:/data/db
+    networks:
+      - "ipaas"
 volumes:
   db:
 
