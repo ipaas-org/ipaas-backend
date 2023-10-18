@@ -10,9 +10,8 @@ type Container struct {
 	Name            string          `bson:"name" json:"name"`
 	Status          ContainerStatus `bson:"status" json:"status"`
 	CreatedAt       time.Time       `bson:"createdAt" json:"createdAt"`
-	Envs            []KeyValue      `bson:"envs,omitempty" json:"envs"`
-	Labels          []KeyValue      `bson:"labels,omitempty" json:"labels"`
 	AttachedNetorks []string        `bson:"attachedNetworks,omitempty" json:"attachedNetworks"`
+	Labels          []KeyValue      `bson:"labels,omitempty" json:"labels"`
 	// Port            string          `bson:"port" json:"port"`
 }
 
