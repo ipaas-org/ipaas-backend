@@ -8,27 +8,27 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (c *Controller) GenerateLabels(name, ownerID string, serviceType model.ServiceType) []model.KeyValue {
+func (c *Controller) GenerateLabels(name, ownerID string, serviceKind model.ServiceKind) []model.KeyValue {
 	return []model.KeyValue{
 		{Key: "org.ipaas.service.name", Value: name},
 		{Key: "org.ipaas.service.owner", Value: ownerID},
-		{Key: "org.ipaas.service.type", Value: string(serviceType)},
+		{Key: "org.ipaas.service.kind", Value: string(serviceKind)},
 		{Key: "org.ipaas.version", Value: c.app.Version},
 		{Key: "org.ipaas.name", Value: c.app.Name},
 		{Key: "org.ipaas.deployment", Value: c.app.Deployment},
 	}
 }
 
-func (c *Controller) CreateNewContainer(ctx context.Context, serviceType model.ServiceType, ownerID, name, image string, env, labels []model.KeyValue) (string, string, error) {
+func (c *Controller) CreateNewContainer(ctx context.Context, kind model.ServiceKind, ownerID, name, image string, env, labels []model.KeyValue) (*model.Container, error) {
 	return c.serviceManager.CreateNewContainer(ctx, name, image, env, labels)
 }
 
 func (c *Controller) RemoveContainer(ctx context.Context, id string) error {
-	return c.serviceManager.RemoveContainer(ctx, id)
+	return c.serviceManager.RemoveContainerByID(ctx, id)
 }
 
 func (c *Controller) StartContainer(ctx context.Context, id string) error {
-	return c.serviceManager.StartContainer(ctx, id)
+	return c.serviceManager.StartContainerByID(ctx, id)
 }
 
 func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, lastCommitHash, image string) error {
@@ -44,29 +44,32 @@ func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, last
 		return fmt.Errorf("c.applicationRepo.FindByID: %w", err)
 	}
 
+	labels := c.GenerateLabels(app.Name, app.Owner, model.ApplicationKindWeb)
+
 	c.l.Debugf("creating new container for application: %+v", app)
-	containerID, _, err := c.CreateNewContainer(ctx, WebType, app.OwnerEmail, app.Name, image, app.Envs)
+	container, err := c.CreateNewContainer(ctx, model.ApplicationKindWeb, app.Owner, app.Name, image, app.Envs, labels)
 	if err != nil {
 		c.l.Errorf("error creating new container: %v", err)
 		return fmt.Errorf("c.CreateNewContainer: %w", err)
 	}
 
-	app.Status = StatusRunning
-	app.ImageID = image
-	app.ContainerID = containerID
-	app.Type = string(WebType)
+	app.State = StateCreated
+	app.Container = container
+	app.Kind = model.ApplicationKindWeb
 	app.LastCommitHash = lastCommitHash
 
 	c.l.Debugf("container created correctly, updating application status: %+v", app)
-	if _, err := c.applicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application status: %v", err)
 		return fmt.Errorf("c.applicationRepo.UpdateByID: %w", err)
 	}
 	c.l.Debug("application status updated correctly")
 	c.l.Debug("starting container")
-	if err := c.StartContainer(ctx, containerID); err != nil {
-		app.Status = StatusFailed
-		c.applicationRepo.UpdateByID(ctx, app, app.ID)
+	if err := c.StartContainer(ctx, container.ContainerID); err != nil {
+		app.State = StateFailed
+		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+			c.l.Errorf("error updating container: %v", err)
+		}
 		c.l.Errorf("error starting container: %v", err)
 		return fmt.Errorf("c.StartContainer: %w", err)
 	}
