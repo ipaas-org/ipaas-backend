@@ -3,12 +3,14 @@ package controller
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (c *Controller) DoesUserExist(ctx context.Context, email string) (bool, error) {
-	_, err := c.userRepo.FindByEmail(ctx, email)
+	_, err := c.UserRepo.FindByEmail(ctx, email)
 	if err != nil {
 		if err == repo.ErrNotFound {
 			return false, nil
@@ -18,13 +20,22 @@ func (c *Controller) DoesUserExist(ctx context.Context, email string) (bool, err
 	return true, nil
 }
 
+// todo: create user should generate the user not ask for a user model
+// todo: separate create user to generate user model (it can ask for the user info but it needs to create the user code and network id,...)
+// todo: create insert user function that adds to repo
 func (c *Controller) CreateUser(ctx context.Context, user *model.User) error {
-	c.l.Debugf("Creating user %s (name=%q email=%q)", user.Username, user.FullName, user.Email)
-	// networkID, err := c.CreateNewNetwork(ctx, user.Username)
-	// if err != nil {
-	// 	c.l.Errorf("Error creating network for user %s (name=%q email=%q): %s", user.Username, user.FullName, user.Email, err.Error())
-	// 	return err
-	// }
+	if user.Code == "" {
+		code, err := c.CreateNewUserCode(ctx)
+		if err != nil {
+			return err
+		}
+		user.Code = code
+	}
+
+	if user.Info == nil {
+		return ErrUserInfoNotSet
+	}
+
 	if user.NetworkID == "" {
 		return ErrNetworkIDNotSet
 	}
@@ -32,19 +43,25 @@ func (c *Controller) CreateUser(ctx context.Context, user *model.User) error {
 	if user.Role == "" {
 		user.Role = model.RoleUser
 	}
-	user.UserSettings.Theme = "light"
 
-	_, err := c.userRepo.InsertOne(ctx, user)
-	if err != nil {
-		c.l.Errorf("Error creating user %s (name=%q email=%q): %s", user.Username, user.FullName, user.Email, err.Error())
+	if user.UserSettings == nil {
+		user.UserSettings = &model.UserSettings{
+			Theme: "light",
+		}
+	}
+
+	user.ID = primitive.NewObjectID()
+
+	if _, err := c.UserRepo.InsertOne(ctx, user); err != nil {
+		c.l.Errorf("error inserting user %v", user)
 		return err
 	}
-	c.l.Infof("user %s (name=%q email=%q) created successfully", user.Username, user.FullName, user.Email)
+	c.l.Infof("user %v created successfully", user)
 	return nil
 }
 
 func (c *Controller) GetUserFromEmail(ctx context.Context, email string) (*model.User, error) {
-	return c.userRepo.FindByEmail(ctx, email)
+	return c.UserRepo.FindByEmail(ctx, email)
 }
 
 // TODO
@@ -66,4 +83,12 @@ func (c *Controller) DeleteUser(ctx context.Context, email string) (bool, error)
 	// }
 	// c.RemoveNetwork(ctx, user.NetworkID)
 	return false, nil
+}
+
+func (c *Controller) CreateNewUserCode(ctx context.Context) (string, error) {
+	ran, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+	return ran.String(), nil
 }
