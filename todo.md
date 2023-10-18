@@ -1,8 +1,9 @@
 - stuff
 - [ ] i refresh token devono essere mono uso, una volta usati vanno rimossi dal db
 - [ ] do not use cookies, use authorization header bearer
-
+- [ ] check if the start server in http handler restarts or not the handler in closed server error
 - utente normale | testing
+- [ ] fare uno studio sul dominio, mancano i termini e spesso non sono consistenti
 
   - funzioni utente
     - [x] create
@@ -41,7 +42,7 @@
         - [ ] set additional packages (non implementato in questa versione) (funziona solo con nixpacks) (feature flag)
           - [ ] nix package
           - [ ] apt package
-    - [ ] get status of depolument by name
+    - [ ] get status of depolyment by name
     - [ ] get deployments list
     - [ ] get deployment
       - [ ] name (dns)
