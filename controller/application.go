@@ -10,19 +10,19 @@ import (
 )
 
 const (
-	StatusCreated  = "created"
-	StatusPending  = "pending"
-	StatusStarting = "starting"
-	StatusRunning  = "running"
-	StatusFailed   = "failed"
-	StatusBuilding = "building"
-	StatusUpdating = "updating"
+	StateCreated  = "created"
+	StatePending  = "pending"
+	StateStarting = "starting"
+	StateRunning  = "running"
+	StateFailed   = "failed"
+	StateBuilding = "building"
+	StateUpdating = "updating"
 )
 
 // todo: is not available when there is a web applpication with the same name
 // todo: skip this step if it is a database
 func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string) bool {
-	_, err := c.applicationRepo.FindByName(ctx, name)
+	_, err := c.ApplicationRepo.FindByName(ctx, name)
 	available := err == repo.ErrNotFound
 	c.l.Debugf("is name[%s] system available: %t", name, available)
 	return available
@@ -30,14 +30,14 @@ func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string)
 
 // todo: use this function to check if the name is available for a database
 func (c *Controller) IsNameAvailableUserWide(ctx context.Context, name, username string) bool {
-	_, err := c.applicationRepo.FindByNameAndOwnerUsername(ctx, name, username)
+	_, err := c.ApplicationRepo.FindByNameAndOwner(ctx, name, username)
 	available := err == repo.ErrNotFound
 	c.l.Debugf("is name[%s] available for %s: %t", name, username, available)
 	return available
 }
 
 func (c *Controller) DoesApplicationExists(ctx context.Context, app *model.Application) (bool, error) {
-	_, err := c.applicationRepo.FindByID(ctx, app.ID)
+	_, err := c.ApplicationRepo.FindByID(ctx, app.ID)
 	if err != nil {
 		if err == repo.ErrNotFound {
 			return false, nil
@@ -48,13 +48,13 @@ func (c *Controller) DoesApplicationExists(ctx context.Context, app *model.Appli
 }
 
 func (c *Controller) GetApplicationByID(ctx context.Context, id primitive.ObjectID) (*model.Application, error) {
-	return c.applicationRepo.FindByID(ctx, id)
+	return c.ApplicationRepo.FindByID(ctx, id)
 }
 
 func (c *Controller) InsertApplication(ctx context.Context, app *model.Application) error {
-	app.Status = StatusCreated
+	app.State = StateCreated
 	app.ID = primitive.NewObjectID()
-	_, err := c.applicationRepo.InsertOne(ctx, app)
+	_, err := c.ApplicationRepo.InsertOne(ctx, app)
 	if err != nil {
 		return fmt.Errorf("error inserting application: %v", err)
 	}
@@ -62,7 +62,7 @@ func (c *Controller) InsertApplication(ctx context.Context, app *model.Applicati
 }
 
 func (c *Controller) UpdateApplicationState(ctx context.Context, app *model.Application) error {
-	if _, err := c.applicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application status: %v", err)
 		return fmt.Errorf("c.applicationRepo.UpdateByID: %w", err)
 	}
