@@ -13,7 +13,7 @@ type DbContainerConfig struct {
 }
 
 type (
-	ServiceType      string
+	ServiceKind      string
 	ApplicationState string
 
 	KeyValue struct {
@@ -23,12 +23,13 @@ type (
 
 	Application struct {
 		ID             primitive.ObjectID `bson:"_id,omitemtpy" json:"-"`
-		Type           ServiceType        `bson:"type" json:"type,omitempty"`
+		Kind           ServiceKind        `bson:"kind" json:"kind,omitempty"`
 		Name           string             `bson:"name" json:"name,omitempty"`
 		State          ApplicationState   `bson:"state" json:"state,omitempty"`
-		OwnerEmail     string             `bson:"ownerEmail" json:"ownerEmail,omitempty"`
+		Owner          string             `bson:"owner" json:"owner,omitempty"`
 		PortToMap      string             `bson:"portToMap" json:"portToMap"`
-		Container      Container          `bson:"container" json:"container,omitempty"`
+		Container      *Container         `bson:"container" json:"container,omitempty"`
+		Envs           []KeyValue         `bson:"envs,omitempty" json:"envs"`
 		Description    string             `bson:"description,omitemtpy" json:"description,omitempty"`
 		GithubRepo     string             `bson:"githubRepo,omitemtpy" json:"githubRepo,omitempty"`
 		GithubBranch   string             `bson:"githubBranch,omitemtpy" json:"githubBranch,omitempty"`
@@ -40,11 +41,16 @@ type (
 )
 
 const (
-	ApplicationTypeWeb      ServiceType = "web"
-	ApplicationTypeDatabase ServiceType = "database"
+	ApplicationKindWeb      ServiceKind = "web"
+	ApplicationKindDatabase ServiceKind = "database"
 
-	ApplicationStateCreated ApplicationState = "created"
+	ApplicationStatePending  ApplicationState = "pending"
+	ApplicationStateBuilding ApplicationState = "building"
 )
+
+func (s ServiceKind) String() string {
+	return string(s)
+}
 
 func (a ApplicationState) String() string {
 	return string(a)
