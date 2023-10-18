@@ -13,6 +13,7 @@ type (
 		InsertOne(ctx context.Context, userModel *model.User) (interface{}, error)
 		FindByID(ctx context.Context, id primitive.ObjectID) (*model.User, error)
 		FindByEmail(ctx context.Context, email string) (*model.User, error)
+		FindByCode(ctx context.Context, userCode string) (*model.User, error)
 		UpdateGithubAccessTokenByID(ctx context.Context, githubAccessToken string, id primitive.ObjectID) (bool, error)
 		DeleteByID(ctx context.Context, id primitive.ObjectID) (bool, error)
 	}
@@ -30,15 +31,15 @@ type (
 	}
 
 	ApplicationRepoer interface {
-		InsertOne(ctx context.Context, a *model.Application) (id interface{}, err error)
-		FindByID(ctx context.Context, id primitive.ObjectID) (*model.Application, error)
+		FindByID(ctx context.Context, _id primitive.ObjectID) (*model.Application, error)
 		FindByName(ctx context.Context, name string) (*model.Application, error)
-		FindByNameAndOwnerUsername(ctx context.Context, name, ownerUsername string) (*model.Application, error)
+		FindByNameAndOwner(ctx context.Context, name, owner string) (*model.Application, error)
 		FindByContainerID(ctx context.Context, containerID string) (*model.Application, error)
-		FindByOwnerUsername(ctx context.Context, ownerUsername string) ([]*model.Application, error)
-		FindByOwnerUsernameAndTypeAndIsPublicTrue(ctx context.Context, ownerUsername string, appType model.ServiceType) ([]*model.Application, error)
-		FindByOwnerUsernameAndTypeAndIsPublicFalse(ctx context.Context, ownerUsername string, appType model.ServiceType) ([]*model.Application, error)
-		FindByOwnerUsernameAndIsUpdatableTrue(ctx context.Context, ownerUsername string) ([]*model.Application, error)
+		FindByOwner(ctx context.Context, owner string) ([]*model.Application, error)
+		FindByOwnerAndTypeAndIsPublicTrue(ctx context.Context, owner string, appType model.ServiceKind) ([]*model.Application, error)
+		FindByOwnerAndTypeAndIsPublicFalse(ctx context.Context, owner string, appType model.ServiceKind) ([]*model.Application, error)
+		FindByOwnerAndIsUpdatableTrue(ctx context.Context, owner string) ([]*model.Application, error)
+		InsertOne(ctx context.Context, a *model.Application) (id interface{}, err error)
 		UpdateByID(ctx context.Context, a *model.Application, id primitive.ObjectID) (bool, error)
 		DeleteByID(ctx context.Context, id primitive.ObjectID) (bool, error)
 	}
