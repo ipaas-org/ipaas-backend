@@ -8,7 +8,7 @@ import (
 
 type RefreshToken struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty"`
-	UserEmail  string             `bson:"userEmail"`
+	UserCode   string             `bson:"userCode"`
 	Token      string             `bson:"token"`
 	Expiration time.Time          `bson:"expiration"`
 }
