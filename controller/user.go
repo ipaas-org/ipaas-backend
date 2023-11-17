@@ -20,44 +20,55 @@ func (c *Controller) DoesUserExist(ctx context.Context, email string) (bool, err
 	return true, nil
 }
 
+func (c *Controller) createNewUserCode(ctx context.Context) (string, error) {
+	ran, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+	return ran.String(), nil
+}
+
 // todo: create user should generate the user not ask for a user model
 // todo: separate create user to generate user model (it can ask for the user info but it needs to create the user code and network id,...)
 // todo: create insert user function that adds to repo
-func (c *Controller) CreateUser(ctx context.Context, user *model.User) error {
-	if user.Code == "" {
-		code, err := c.CreateNewUserCode(ctx)
+func (c *Controller) CreateUser(ctx context.Context, info *model.UserInfo, role model.Role, networkID string) (*model.User, error) {
+	user := new(model.User)
+	user.Info = info
+
+	userCode, err := c.createNewUserCode(ctx)
+	if err != nil {
+		return nil, err
+	}
+	user.Code = userCode
+
+	if networkID == "" {
+		networkID, err = c.serviceManager.CreateNewNetwork(ctx, userCode)
 		if err != nil {
-			return err
-		}
-		user.Code = code
-	}
-
-	if user.Info == nil {
-		return ErrUserInfoNotSet
-	}
-
-	if user.NetworkID == "" {
-		return ErrNetworkIDNotSet
-	}
-
-	if user.Role == "" {
-		user.Role = model.RoleUser
-	}
-
-	if user.UserSettings == nil {
-		user.UserSettings = &model.UserSettings{
-			Theme: "light",
+			c.l.Errorf("error creating new network: %v", err)
+			return nil, err
 		}
 	}
+	user.NetworkID = networkID
 
-	user.ID = primitive.NewObjectID()
+	if role == "" {
+		role = model.RoleUser
+	}
 
-	if _, err := c.UserRepo.InsertOne(ctx, user); err != nil {
+	user.Role = role
+	user.UserSettings = &model.UserSettings{Theme: "light"}
+
+	if err := c.insertUser(ctx, user); err != nil {
 		c.l.Errorf("error inserting user %v", user)
-		return err
+		return nil, err
 	}
 	c.l.Infof("user %v created successfully", user)
-	return nil
+	return user, nil
+}
+
+func (c *Controller) insertUser(ctx context.Context, user *model.User) error {
+	user.ID = primitive.NewObjectID()
+	_, err := c.UserRepo.InsertOne(ctx, user)
+	return err
 }
 
 func (c *Controller) GetUserFromEmail(ctx context.Context, email string) (*model.User, error) {
@@ -83,12 +94,4 @@ func (c *Controller) DeleteUser(ctx context.Context, email string) (bool, error)
 	// }
 	// c.RemoveNetwork(ctx, user.NetworkID)
 	return false, nil
-}
-
-func (c *Controller) CreateNewUserCode(ctx context.Context) (string, error) {
-	ran, err := uuid.NewRandom()
-	if err != nil {
-		return "", err
-	}
-	return ran.String(), nil
 }
