@@ -20,15 +20,14 @@ func (h *httpHandler) jwtHeaderCheckerMiddleware(next echo.HandlerFunc) echo.Han
 			return respErrorFromHttpError(c, httperr)
 		}
 
-		h.l.Debug("access token: ", accessToken)
 		expired, err := h.controller.IsAccessTokenExpired(c.Request().Context(), accessToken)
 		if err != nil {
 			h.l.Errorf("unexpected error trying to check if token is expired, it's probably an invalid token: %v", err)
-			return respError(c, 401, "invalid access token", ErrInvalidAccessToken, "invalid access token, please login again")
+			return respError(c, 401, "invalid access token", "invalid access token, please login again", ErrInvalidAccessToken)
 		}
 
 		if expired {
-			return respError(c, 401, "expired access token", ErrAccessTokenExpired, "access token is expired, refresh the tokens or login again if you dont have a refresh token")
+			return respError(c, 401, "expired access token", "access token is expired, refresh the tokens or login again if you dont have a refresh token", ErrAccessTokenExpired)
 		}
 
 		return next(c)
