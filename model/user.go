@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	RoleUser    = "user"
-	RoleTesting = "testing" //used only for unit testing
+	RoleUser    Role = "user"
+	RoleTesting Role = "testing" //used only for unit testing
 )
 
 type (
@@ -16,7 +16,7 @@ type (
 		ID           primitive.ObjectID `bson:"_id,omitemtpy" json:"-"`
 		Code         string             `bson:"code" json:"code"`
 		NetworkID    string             `bson:"networkId" json:"networkId"`
-		Role         string             `bson:"role" json:"role"` //defaults to "user"
+		Role         Role               `bson:"role" json:"role"` //defaults to "user"
 		UserSettings *UserSettings      `bson:"userSettings" json:"userSettings"`
 		Info         *UserInfo          `bson:"userInfo" json:"userInfo"`
 	}
@@ -33,6 +33,8 @@ type (
 	UserSettings struct {
 		Theme string `bson:"theme" json:"theme"`
 	}
+
+	Role string
 )
 
 func (u *User) String() string {
