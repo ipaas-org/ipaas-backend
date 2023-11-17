@@ -20,7 +20,18 @@ database:
 jwt:
   duration: "10h"
 
-oauth:
+gitProvider:
   provider: "github"
   redirectUri: "http://localhost:8082/api/v1/oauth/callback"
   callbackUri: "http://localhost:8082/api/v1/oauth/callback"
+
+static-images:
+  - "redis:7.2.3-alpine3.18"
+  - "redislabs/redisinsight:1.14.0"
+  - "mysql:8.2.0-oracle"
+  - "mariadb:11.1.3"
+  - "phpmyadmin:5.2.1-fpm-alpine"
+  - "mongo:7.0.3"
+  - "mongo-express:1.0.0-20-alpine3.18"
+  - "postgres:16.1"
+  - "dpage/pgadmin4:7.8"

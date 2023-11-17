@@ -12,13 +12,13 @@ import (
 
 type (
 	Config struct {
-		App      `yaml:"app"`
-		Log      `yaml:"logger"`
-		JWT      `yaml:"jwt"`
-		Oauth    `yaml:"oauth"`
-		RMQ      `yaml:"rabbitmq"`
-		HTTP     `yaml:"http"`
-		Database `yaml:"database"`
+		App         `yaml:"app"`
+		Log         `yaml:"logger"`
+		JWT         `yaml:"jwt"`
+		GitProvider `yaml:"gitProvider"`
+		RMQ         `yaml:"rabbitmq"`
+		HTTP        `yaml:"http"`
+		Database    `yaml:"database"`
 	}
 
 	App struct {
@@ -37,12 +37,12 @@ type (
 		Duration time.Duration `yaml:"duration" env:"JWT_DURATION"`
 	}
 
-	Oauth struct {
-		Provider     string `env-required:"true" yaml:"provider"    env:"OAUTH_PROVIDER"`
-		RedirectUri  string `env-required:"true" yaml:"redirectUri" env:"OAUTH_REDIRECT_URI"`
-		CallbackUri  string `env-required:"true" yaml:"callbackUri" env:"OAUTH_CALLBACK_URI"`
-		ClientId     string `env:"OAUTH_CLIENT_ID"`
-		ClientSecret string `env:"OAUTH_CLIENT_SECRET"`
+	GitProvider struct {
+		Provider     string `env-required:"true" yaml:"provider"    env:"GIT_PROVIDER"`
+		RedirectUri  string `env-required:"true" yaml:"redirectUri" env:"GIT_PROVIDER_REDIRECT_URI"`
+		CallbackUri  string `env-required:"true" yaml:"callbackUri" env:"GIT_PROVIDER_CALLBACK_URI"`
+		ClientId     string `env:"GIT_PROVIDER_CLIENT_ID"`
+		ClientSecret string `env:"GIT_PROVIDER_CLIENT_SECRET"`
 	}
 
 	HTTP struct {
@@ -77,7 +77,7 @@ func NewConfig(configPath ...string) (*Config, error) {
 		}
 	}
 
-	mustCheck := []string{"JWT_SECRET", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_SECRET"}
+	mustCheck := []string{"JWT_SECRET", "GIT_PROVIDER_CLIENT_ID", "GIT_PROVIDER_CLIENT_SECRET"}
 
 	for _, v := range mustCheck {
 		logrus.Debug(os.Getenv(v))
