@@ -93,6 +93,7 @@ func main() {
 	if err := rmq.Connect(); err != nil {
 		l.Fatalf("main - rmq.Connect - error connecting to rabbitmq: %s", err.Error())
 	}
+	rmq.Close()
 
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt,
