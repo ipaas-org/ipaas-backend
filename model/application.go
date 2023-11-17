@@ -22,21 +22,23 @@ type (
 	}
 
 	Application struct {
-		ID             primitive.ObjectID `bson:"_id,omitemtpy" json:"-"`
-		Kind           ServiceKind        `bson:"kind" json:"kind,omitempty"`
-		Name           string             `bson:"name" json:"name,omitempty"`
-		State          ApplicationState   `bson:"state" json:"state,omitempty"`
-		Owner          string             `bson:"owner" json:"owner,omitempty"`
-		PortToMap      string             `bson:"portToMap" json:"portToMap"`
-		Container      *Container         `bson:"container" json:"container,omitempty"`
-		Envs           []KeyValue         `bson:"envs,omitempty" json:"envs"`
-		Description    string             `bson:"description,omitemtpy" json:"description,omitempty"`
-		GithubRepo     string             `bson:"githubRepo,omitemtpy" json:"githubRepo,omitempty"`
-		GithubBranch   string             `bson:"githubBranch,omitemtpy" json:"githubBranch,omitempty"`
-		LastCommitHash string             `bson:"lastCommitHash,omitemtpy" json:"lastCommitHash,omitempty"`
-		CreatedAt      time.Time          `bson:"createdAt" json:"createdAt,omitempty"`
-		IsPublic       bool               `bson:"isPublic" json:"isPublic"`
-		IsUpdatable    bool               `bson:"isUpdatable,omitempty" json:"isUpdatable"`
+		ID            primitive.ObjectID `bson:"_id,omitempty" json:"-"`
+		Kind          ServiceKind        `bson:"kind" json:"kind"`
+		Name          string             `bson:"name" json:"name"`
+		DnsName       string             `bson:"dnsName" json:"dnsName"`
+		State         ApplicationState   `bson:"state" json:"state"`
+		Owner         string             `bson:"owner" json:"owner"`
+		CreatedAt     time.Time          `bson:"createdAt" json:"createdAt,omitempty"`
+		ListeningPort string             `bson:"listeningPort" json:"listeningPort"`
+		Description   string             `bson:"description,omitempty" json:"description,omitempty"`
+		GithubRepo    string             `bson:"githubRepo" json:"githubRepo"`
+		GithubBranch  string             `bson:"githubBranch" json:"githubBranch"`
+		BuiltCommit   string             `bson:"builtCommit" json:"builtCommit,omitempty"`
+		IsPublic      bool               `bson:"isPublic" json:"isPublic"`
+		IsUpdatable   bool               `bson:"isUpdatable,omitempty" json:"isUpdatable"`
+		Container     *Container         `bson:"container" json:"container,omitempty"`
+		Envs          []KeyValue         `bson:"envs,omitempty" json:"envs"`
+		// Image          *Image             `bson:"image" json:"image,omitempty"`
 	}
 )
 
@@ -46,6 +48,9 @@ const (
 
 	ApplicationStatePending  ApplicationState = "pending"
 	ApplicationStateBuilding ApplicationState = "building"
+	ApplicationStateStarting ApplicationState = "starting"
+	ApplicationStateRunning  ApplicationState = "running"
+	ApplicationStateFailed   ApplicationState = "failed"
 )
 
 func (s ServiceKind) String() string {
