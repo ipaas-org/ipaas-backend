@@ -28,7 +28,6 @@ func NewIpaasImageBuilder(uri, requestQueue string) *IpaasImageBuilder {
 	}
 }
 
-// func (i ImageBuilder) BuildImage(uuid, providerToken, userID, repo, branch string) error
 func (i *IpaasImageBuilder) BuildImage(info model.BuildRequest) error {
 	body, err := json.Marshal(info)
 	if err != nil {
