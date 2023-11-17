@@ -47,7 +47,7 @@ func InitRouter(e *echo.Echo, l *logrus.Logger, controller *controller.Controlle
 	}))
 
 	echo.NotFoundHandler = func(c echo.Context) error {
-		return respError(c, http.StatusNotFound, "invalid endpoint", fmt.Sprintf("endpoint %s is not handled, check the documentation", c.Request().URL.Path), "invalid_endpoint")
+		return respError(c, 404, "invalid endpoint", fmt.Sprintf("endpoint %s is not handled, check the documentation", c.Request().URL.Path), "invalid_endpoint")
 	}
 
 	httpHandler := NewHttpHandler(e, controller, l)
