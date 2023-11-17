@@ -74,7 +74,7 @@ func (r *RabbitMQ) Connect() error {
 	r.Delivery, err = r.Channel.Consume(
 		responseQueue.Name, // queue
 		"",                 // consumer
-		false,              // auto-ack
+		true,               // auto-ack
 		false,              // exclusive
 		false,              // no-local
 		false,              // no-wait
@@ -142,26 +142,24 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 		case <-ctx.Done():
 			r.l.Info("stopping rabbitmq consumer")
 			return
-		case err := <-r.Error:
-			r.l.Error(err)
 		case d := <-r.Delivery:
 			r.l.Info("received message from rabbitmq")
 			r.l.Debugf("received: %q", string(d.Body))
 			if d.Body == nil {
-				if err := d.Ack(false); err != nil {
-					r.l.Errorf("r.Consume.Ack(): %v:", err)
-					return
-				}
+				// if err := d.Ack(false); err != nil {
+				// 	r.l.Errorf("r.Consume.Ack(): %v:", err)
+				// 	return
+				// }
 				continue
 			}
 			response := new(model.BuildResponse)
 			if err := json.Unmarshal(d.Body, response); err != nil {
 				r.l.Errorf("r.Consume.json.Unmarshal(): %v:", err)
 				r.l.Debug(string(d.Body))
-				if err := d.Nack(false, false); err != nil {
-					r.l.Errorf("r.Consume.Nack(): %v:", err)
-					return
-				}
+				// if err := d.Nack(false, false); err != nil {
+				// 	r.l.Errorf("r.Consume.Nack(): %v:", err)
+				// 	return
+				// }
 				continue
 				//TODO: should send to a unprocessable queue
 			}
@@ -170,32 +168,44 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 			if response.IsError {
 				r.l.Error("r.Controller: error building image", response.Message)
 				r.l.Error("r.Controller: error building image fault:", response.Fault)
-				if response.Fault == model.ResponseErrorFaultService {
-					//TODO: resend the message to the queue to process again, at least 3 times
-					//if it fails notify the user that the build failed and to try again later
-				} else {
-					//TODO: notify the user that the build failed and the reason
-					//build error is in response.Message
-				}
-				if err := d.Nack(false, false); err != nil {
-					r.l.Errorf("r.Consume.Nack(): %v:", err)
-					return
-				}
+				// if response.Fault == model.ResponseErrorFaultService {
+				// 	//TODO: resend the message to the queue to process again, at least 3 times
+				// 	//if it fails notify the user that the build failed and to try again later
+				// } else {
+				// 	//TODO: notify the user that the build failed and the reason
+				// 	//build error is in response.Message
+				// }
+				continue
+				// if err := d.Nack(false, false); err != nil {
+				// 	r.l.Errorf("r.Consume.Nack(): %v:", err)
+				// 	return
+				// }
 			}
 
-			if err := r.Controller.CreateContainerFromIDAndImage(ctx, response.UUID, response.BuiltCommit, response.ImageID); err != nil {
-				r.l.Errorf("r.Controller.CreateContainerFromIDAndImage(): %v:", err)
-				if err := d.Nack(false, false); err != nil {
-					r.l.Errorf("r.Consume.Nack(): %v:", err)
-					return
-				}
+			if err := r.Controller.CreateApplicationFromApplicationIDandImageID(ctx, response.ApplicationID, response.ImageID, response.BuiltCommit); err != nil {
+				r.l.Errorf("error creating application after image builder response %v:", err)
+				// if err := d.Nack(false, false); err != nil {
+				// 	r.l.Errorf("r.Consume.Nack(): %v:", err)
+				// 	return
+				// }
+				continue
 			}
 
-			if err := d.Ack(false); err != nil {
-				r.l.Errorf("r.Consume.Ack(): %v:", err)
-				return
-			}
-			r.l.Info("acknowledged message from rabbitmq")
+			r.l.Info("application created successfully")
 		}
 	}
 }
+
+/*
+{
+	"applicationID":"654e3ad0368ca328670b7d55",
+	"repo":"https://github.com/Vano2903/testing",
+	"status":"success",
+	"imageID":"b5c16592-27c6-4df9-89ca-7260c8a37e09",
+	"imageName":"",
+	"buildCommit":"8c76e330c5e4119f814f4e66dce4514082157503",
+	"isError":false,
+	"fault":"",
+	"message":""
+}
+*/
