@@ -6,10 +6,10 @@ import (
 	"github.com/ipaas-org/ipaas-backend/config"
 	"github.com/ipaas-org/ipaas-backend/pkg/jwt"
 	"github.com/ipaas-org/ipaas-backend/repo"
+	"github.com/ipaas-org/ipaas-backend/services/gitProvider"
+	"github.com/ipaas-org/ipaas-backend/services/gitProvider/github"
 	"github.com/ipaas-org/ipaas-backend/services/imageBuilder"
 	"github.com/ipaas-org/ipaas-backend/services/imageBuilder/ipaas"
-	"github.com/ipaas-org/ipaas-backend/services/oauth"
-	"github.com/ipaas-org/ipaas-backend/services/oauth/github"
 	"github.com/ipaas-org/ipaas-backend/services/serviceManager"
 	"github.com/ipaas-org/ipaas-backend/services/serviceManager/docker"
 	"github.com/sirupsen/logrus"
@@ -23,7 +23,7 @@ type Controller struct {
 	StateRepo       repo.StateRepoer
 	ApplicationRepo repo.ApplicationRepoer
 
-	oauthService   oauth.Oauther
+	gitProvider    gitProvider.Provider
 	jwtHandler     *jwt.JWThandler
 	serviceManager serviceManager.ServiceManager
 	app            config.App
@@ -31,13 +31,13 @@ type Controller struct {
 }
 
 func NewController(ctx context.Context, config *config.Config, l *logrus.Logger) *Controller {
-	var provider oauth.Oauther
-	switch config.Oauth.Provider {
-	case oauth.ProviderGithub:
-		oauth := config.Oauth
+	var provider gitProvider.Provider
+	switch config.GitProvider.Provider {
+	case gitProvider.ProviderGithub:
+		oauth := config.GitProvider
 		provider = github.NewGithubOauth(oauth.ClientId, oauth.ClientSecret, oauth.CallbackUri)
 	default:
-		l.Fatalf("Unknown oauth provider: %s", config.Oauth.Provider)
+		l.Fatalf("Unknown oauth provider: %s", config.GitProvider.Provider)
 	}
 
 	serviceManager, err := docker.NewDockerApplicationManager(ctx)
@@ -56,7 +56,7 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 	l.Infof("sending request on %s queue", config.RMQ.RequestQueue)
 	return &Controller{
 		l:              l,
-		oauthService:   provider,
+		gitProvider:    provider,
 		jwtHandler:     jwtHandler,
 		serviceManager: serviceManager,
 		app:            config.App,

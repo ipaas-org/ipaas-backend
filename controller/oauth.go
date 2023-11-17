@@ -46,17 +46,17 @@ func (c *Controller) GenerateLoginUri(ctx context.Context) string {
 		return ""
 	}
 
-	return c.oauthService.GenerateLoginRedirectUri(state)
+	return c.gitProvider.GenerateLoginRedirectUri(state)
 }
 
 func (c *Controller) GetUserInfoFromOauthCode(ctx context.Context, code string) (*model.UserInfo, error) {
-	accessToken, err := c.oauthService.GetAccessTokenFromCode(code)
+	accessToken, err := c.gitProvider.GetAccessTokenFromCode(code)
 	if err != nil {
 		c.l.Errorf("Error getting access token from code: %s", err.Error())
 		return nil, err
 	}
 
-	user, err := c.oauthService.GetUserInfo(accessToken)
+	user, err := c.gitProvider.GetUserInfo(accessToken)
 	if err != nil {
 		c.l.Errorf("Error getting user info: %s", err.Error())
 		return nil, err
