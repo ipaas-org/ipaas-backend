@@ -1,11 +1,9 @@
 package controller
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/ipaas-org/ipaas-backend/model"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (c *Controller) GenerateLabels(name, ownerID string, serviceKind model.ServiceKind) []model.KeyValue {
@@ -19,74 +17,86 @@ func (c *Controller) GenerateLabels(name, ownerID string, serviceKind model.Serv
 	}
 }
 
-func (c *Controller) CreateNewContainer(ctx context.Context, kind model.ServiceKind, ownerID, name, image string, env, labels []model.KeyValue) (*model.Container, error) {
-	return c.serviceManager.CreateNewContainer(ctx, name, image, env, labels)
+func (c *Controller) GenerateTraefikDnsLables(name, host, port string) []model.KeyValue {
+	router := fmt.Sprintf("traefik.http.routers.%s", name)
+	service := fmt.Sprintf("traefik.http.services.%s", name)
+
+	return []model.KeyValue{
+		{Key: "traefik.enable", Value: "true"},
+		{Key: router + ".entrypoints", Value: "web"},
+		{Key: router + ".rule", Value: "Host(`" + host + "`)"},
+		{Key: service + ".loadbalancer.server.port", Value: port},
+	}
 }
 
-func (c *Controller) RemoveContainer(ctx context.Context, id string) error {
-	return c.serviceManager.RemoveContainerByID(ctx, id)
-}
+// func (c *Controller) CreateNewContainer(ctx context.Context, kind model.ServiceKind, ownerID, name, image string, env, labels []model.KeyValue) (*model.Container, error) {
+// 	return c.serviceManager.CreateNewContainer(ctx, name, image, env, labels)
+// }
 
-func (c *Controller) StartContainer(ctx context.Context, id string) error {
-	return c.serviceManager.StartContainerByID(ctx, id)
-}
+// func (c *Controller) RemoveContainer(ctx context.Context, id string) error {
+// 	return c.serviceManager.RemoveContainerByID(ctx, id)
+// }
 
-func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, lastCommitHash, image string) error {
-	uuid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		c.l.Errorf("error parsing uuid: %v", err)
-		return fmt.Errorf("primitive.ObjectIDFromHex: %w", err)
-	}
+// func (c *Controller) StartContainer(ctx context.Context, id string) error {
+// 	return c.serviceManager.StartContainerByID(ctx, id)
+// }
 
-	app, err := c.GetApplicationByID(ctx, uuid)
-	if err != nil {
-		c.l.Errorf("error finding application: %v", err)
-		return fmt.Errorf("c.applicationRepo.FindByID: %w", err)
-	}
+// func (c *Controller) CreateContainerFromIDAndImage(ctx context.Context, id, lastCommitHash, image string) error {
+// 	uuid, err := primitive.ObjectIDFromHex(id)
+// 	if err != nil {
+// 		c.l.Errorf("error parsing uuid: %v", err)
+// 		return fmt.Errorf("primitive.ObjectIDFromHex: %w", err)
+// 	}
 
-	labels := c.GenerateLabels(app.Name, app.Owner, model.ApplicationKindWeb)
+// 	app, err := c.GetApplicationByID(ctx, uuid)
+// 	if err != nil {
+// 		c.l.Errorf("error finding application: %v", err)
+// 		return fmt.Errorf("c.applicationRepo.FindByID: %w", err)
+// 	}
 
-	c.l.Debugf("creating new container for application: %+v", app)
-	container, err := c.CreateNewContainer(ctx, model.ApplicationKindWeb, app.Owner, app.Name, image, app.Envs, labels)
-	if err != nil {
-		c.l.Errorf("error creating new container: %v", err)
-		return fmt.Errorf("c.CreateNewContainer: %w", err)
-	}
+// 	labels := c.GenerateLabels(app.Name, app.Owner, model.ApplicationKindWeb)
 
-	app.State = StateCreated
-	app.Container = container
-	app.Kind = model.ApplicationKindWeb
-	app.LastCommitHash = lastCommitHash
+// 	c.l.Debugf("creating new container for application: %+v", app)
+// 	container, err := c.CreateNewContainer(ctx, model.ApplicationKindWeb, app.Owner, app.Name, image, app.Envs, labels)
+// 	if err != nil {
+// 		c.l.Errorf("error creating new container: %v", err)
+// 		return fmt.Errorf("c.CreateNewContainer: %w", err)
+// 	}
 
-	c.l.Debugf("container created correctly, updating application status: %+v", app)
-	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-		c.l.Errorf("error updating application status: %v", err)
-		return fmt.Errorf("c.applicationRepo.UpdateByID: %w", err)
-	}
-	c.l.Debug("application status updated correctly")
-	c.l.Debug("starting container")
-	if err := c.StartContainer(ctx, container.ContainerID); err != nil {
-		app.State = StateFailed
-		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-			c.l.Errorf("error updating container: %v", err)
-		}
-		c.l.Errorf("error starting container: %v", err)
-		return fmt.Errorf("c.StartContainer: %w", err)
-	}
+// 	app.State = StateCreated
+// 	app.Container = container
+// 	app.Kind = model.ApplicationKindWeb
+// 	app.LastCommitHash = lastCommitHash
 
-	return nil
-}
+// 	c.l.Debugf("container created correctly, updating application status: %+v", app)
+// 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+// 		c.l.Errorf("error updating application status: %v", err)
+// 		return fmt.Errorf("c.applicationRepo.UpdateByID: %w", err)
+// 	}
+// 	c.l.Debug("application status updated correctly")
+// 	c.l.Debug("starting container")
+// 	if err := c.StartContainer(ctx, container.ContainerID); err != nil {
+// 		app.State = StateFailed
+// 		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+// 			c.l.Errorf("error updating container: %v", err)
+// 		}
+// 		c.l.Errorf("error starting container: %v", err)
+// 		return fmt.Errorf("c.StartContainer: %w", err)
+// 	}
+
+// 	return nil
+// }
 
 //=========== network ===========
 
-func (c *Controller) RemoveNetwork(ctx context.Context, id string) error {
-	return c.serviceManager.RemoveNetwork(ctx, id)
-}
+// func (c *Controller) RemoveNetwork(ctx context.Context, id string) error {
+// 	return c.serviceManager.RemoveNetwork(ctx, id)
+// }
 
-func (c *Controller) CreateNewNetwork(ctx context.Context, name string) (string, error) {
-	return c.serviceManager.CreateNewNetwork(ctx, name)
-}
+// func (c *Controller) CreateNewNetwork(ctx context.Context, name string) (string, error) {
+// 	return c.serviceManager.CreateNewNetwork(ctx, name)
+// }
 
-func (c *Controller) ConnectContainerToNetwork(ctx context.Context, containerID, networkID, dnsAlias string) error {
-	return c.serviceManager.ConnectContainerToNetwork(ctx, containerID, networkID, dnsAlias)
-}
+// func (c *Controller) ConnectContainerToNetwork(ctx context.Context, containerID, networkID, dnsAlias string) error {
+// 	return c.serviceManager.ConnectContainerToNetwork(ctx, containerID, networkID, dnsAlias)
+// }
