@@ -5,7 +5,7 @@ import (
 )
 
 type Container struct {
-	ContainerID     string          `bson:"containerID" json:"containerID"`
+	ID              string          `bson:"ID" json:"ID"`
 	ImageID         string          `bson:"imageID" json:"imageID"`
 	Name            string          `bson:"name" json:"name"`
 	Status          ContainerStatus `bson:"status" json:"status"`
