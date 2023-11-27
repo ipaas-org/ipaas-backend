@@ -11,7 +11,7 @@ import (
 func (c *Controller) BuildImage(ctx context.Context, app *model.Application, providerToken string) error {
 	if app.State == model.ApplicationStateBuilding ||
 		app.State == model.ApplicationStateStarting {
-		return ErrUnableToBuildImageInCurrentState
+		return ErrInvalidOperationInCurrentState
 	}
 
 	request := model.BuildRequest{

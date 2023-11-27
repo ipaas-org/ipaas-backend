@@ -18,8 +18,12 @@ var (
 	ErrApplicationNameNotAvailable = errors.New("name is not available")
 	ErrUnsupportedApplicationKind  = errors.New("unsupported application kind")
 
-	//image builder
-	ErrUnableToBuildImageInCurrentState = errors.New("unable to build image in current state")
+	//templates errors
+	ErrMissingRequiredEnvForTemplate = errors.New("missing required env for template")
 
+	//image builder errors
+	ErrInvalidOperationInCurrentState = errors.New("invalid operation in current state")
+
+	//generics
 	ErrNotImplemented = errors.New("not implemented")
 )
