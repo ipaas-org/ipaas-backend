@@ -82,6 +82,11 @@ func main() {
 		applicationCollection := client.Database("ipaas").Collection("application")
 		applicationRepo := mongoRepo.NewApplicationRepoer(applicationCollection)
 		c.ApplicationRepo = applicationRepo
+
+		l.Debug("connecting to template collection")
+		templateCollection := client.Database("ipaas").Collection("templates")
+		templateRepo := mongoRepo.NewTemplateRepoer(templateCollection)
+		c.TemplateRepo = templateRepo
 	default:
 		l.Fatalf("main - unknown database driver: %s", conf.Database.Driver)
 	}
