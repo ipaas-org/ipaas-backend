@@ -62,6 +62,12 @@ func (d DockerApplicationManager) CreateNewContainer(ctx context.Context, name, 
 		RestartPolicy: container.RestartPolicy{
 			Name: "unless-stopped",
 		},
+		Resources: container.Resources{
+			CPUPeriod:         100000,             //100ms
+			CPUQuota:          25000,              //25% of a vCPU
+			Memory:            1024 * 1024 * 1024, //1GB
+			MemoryReservation: 512 * 1024 * 1024,  //soft limit to MB
+		},
 	}
 
 	containerBody, err := d.cli.ContainerCreate(
@@ -71,7 +77,7 @@ func (d DockerApplicationManager) CreateNewContainer(ctx context.Context, name, 
 		return nil, err
 	}
 	container := new(model.Container)
-	container.ContainerID = containerBody.ID
+	container.ID = containerBody.ID
 	container.Name = name
 	container.ImageID = image
 	container.Labels = labels
@@ -83,9 +89,16 @@ func (d DockerApplicationManager) StartContainerByID(ctx context.Context, id str
 	return d.cli.ContainerStart(ctx, id, types.ContainerStartOptions{})
 }
 
-func (d DockerApplicationManager) RemoveContainerByID(ctx context.Context, id string) error {
+func (d DockerApplicationManager) StopContainerByID(ctx context.Context, id string) error {
+	timeout := 10
+	return d.cli.ContainerStop(ctx, id, container.StopOptions{
+		Timeout: &timeout,
+	})
+}
+
+func (d DockerApplicationManager) RemoveContainerByID(ctx context.Context, id string, forced bool) error {
 	return d.cli.ContainerRemove(ctx, id, types.ContainerRemoveOptions{
-		Force: true,
+		Force: forced,
 	})
 }
 
@@ -105,4 +118,15 @@ func (d DockerApplicationManager) ConnectContainerToNetwork(ctx context.Context,
 	return d.cli.NetworkConnect(ctx, networkID, id, &network.EndpointSettings{
 		Aliases: []string{dnsAlias},
 	})
+}
+
+func (d DockerApplicationManager) DisconnectContainerFromNetwork(ctx context.Context, id string, networkID string) error {
+	return d.cli.NetworkDisconnect(ctx, networkID, id, true)
+}
+
+func (d DockerApplicationManager) RemoveImageByID(ctx context.Context, id string) error {
+	_, err := d.cli.ImageRemove(ctx, id, types.ImageRemoveOptions{
+		Force: true,
+	})
+	return err
 }

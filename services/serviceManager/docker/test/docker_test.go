@@ -35,9 +35,9 @@ func TestCreateNewContainer(t *testing.T) {
 		t.Fatalf("error creating the container: %v", err)
 	}
 
-	t.Logf("container id %s and name %s", container.ContainerID, container.Name)
+	t.Logf("container id %s and name %s", container.ID, container.Name)
 	//remove the container with id
-	err = containerManager.RemoveContainerByID(ctx, container.ContainerID)
+	err = containerManager.RemoveContainerByID(ctx, container.ID, true)
 	if err != nil {
 		t.Fatalf("error removing the container: %v", err)
 	}
@@ -64,12 +64,12 @@ func TestStartContainer(t *testing.T) {
 		t.Fatalf("error creating the container: %v", err)
 	}
 
-	err = containerManager.StartContainerByID(ctx, container.ContainerID)
+	err = containerManager.StartContainerByID(ctx, container.ID)
 	if err != nil {
 		t.Fatalf("error starting the container: %v", err)
 	}
 
-	t.Logf("container id %s and name %s", container.ContainerID, container.Name)
+	t.Logf("container id %s and name %s", container.ID, container.Name)
 	//remove the container with id
 	// err = containerManager.RemoveContainer(ctx, container)
 	// if err != nil {
