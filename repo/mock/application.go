@@ -46,7 +46,7 @@ func (r *ApplicationRepoerMock) FindByNameAndOwner(ctx context.Context, name, ow
 
 func (r *ApplicationRepoerMock) FindByContainerID(ctx context.Context, containerID string) (*model.Application, error) {
 	for _, entity := range r.storage {
-		if entity.Container != nil && entity.Container.ContainerID == containerID {
+		if entity.Container != nil && entity.Container.ID == containerID {
 			return entity, nil
 		}
 	}
@@ -63,7 +63,17 @@ func (r *ApplicationRepoerMock) FindByOwner(ctx context.Context, owner string) (
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) FindByOwnerAndTypeAndIsPublicTrue(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByOwnerAndKind(ctx context.Context, owner string, kind model.ServiceKind) ([]*model.Application, error) {
+	var entities []*model.Application
+	for _, entity := range r.storage {
+		if entity.Owner == owner && entity.Kind == kind {
+			entities = append(entities, entity)
+		}
+	}
+	return entities, nil
+}
+
+func (r *ApplicationRepoerMock) FindByOwnerAndKindAndIsPublicTrue(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
 		if entity.Owner == owner && entity.Kind == serviceType && entity.IsPublic {
@@ -73,7 +83,7 @@ func (r *ApplicationRepoerMock) FindByOwnerAndTypeAndIsPublicTrue(ctx context.Co
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMock) FindByOwnerAndTypeAndIsPublicFalse(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMock) FindByOwnerAndKindAndIsPublicFalse(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
 	var entities []*model.Application
 	for _, entity := range r.storage {
 		if entity.Owner == owner && entity.Kind == serviceType && !entity.IsPublic {

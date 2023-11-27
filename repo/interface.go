@@ -36,12 +36,17 @@ type (
 		FindByNameAndOwner(ctx context.Context, name, owner string) (*model.Application, error)
 		FindByContainerID(ctx context.Context, containerID string) (*model.Application, error)
 		FindByOwner(ctx context.Context, owner string) ([]*model.Application, error)
-		FindByOwnerAndTypeAndIsPublicTrue(ctx context.Context, owner string, appType model.ServiceKind) ([]*model.Application, error)
-		FindByOwnerAndTypeAndIsPublicFalse(ctx context.Context, owner string, appType model.ServiceKind) ([]*model.Application, error)
+		FindByOwnerAndKind(ctx context.Context, owner string, kind model.ServiceKind) ([]*model.Application, error)
+		FindByOwnerAndKindAndIsPublicTrue(ctx context.Context, owner string, kind model.ServiceKind) ([]*model.Application, error)
+		FindByOwnerAndKindAndIsPublicFalse(ctx context.Context, owner string, kind model.ServiceKind) ([]*model.Application, error)
 		FindByOwnerAndIsUpdatableTrue(ctx context.Context, owner string) ([]*model.Application, error)
 		InsertOne(ctx context.Context, a *model.Application) (id interface{}, err error)
 		UpdateByID(ctx context.Context, a *model.Application, id primitive.ObjectID) (bool, error)
 		DeleteByID(ctx context.Context, id primitive.ObjectID) (bool, error)
+	}
+
+	TemplateRepoer interface {
+		FindByCode(ctx context.Context, code string) (*model.Template, error)
 	}
 )
 

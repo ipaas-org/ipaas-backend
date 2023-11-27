@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
@@ -22,6 +23,9 @@ type UserRepoerMongo struct {
 }
 
 func (r *UserRepoerMongo) InsertOne(ctx context.Context, user *model.User) (interface{}, error) {
+	t := time.Now()
+	user.CreatedAt = t
+	user.UpdatedAt = t
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
 		return nil, err
@@ -88,6 +92,7 @@ func (r *UserRepoerMongo) UpdateGithubAccessTokenByID(ctx context.Context, githu
 	}, bson.M{
 		"$set": bson.M{
 			"userInfo. githubAccessToken": githubAccessToken,
+			"updatedAt":                   time.Now(),
 		},
 	})
 	if err != nil {

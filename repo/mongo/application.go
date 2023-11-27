@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
@@ -91,7 +92,27 @@ func (r *ApplicationRepoerMongo) FindByOwner(ctx context.Context, owner string) 
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerAndTypeAndIsPublicTrue(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerAndKind(ctx context.Context, owner string, kind model.ServiceKind) ([]*model.Application, error) {
+	cursor, err := r.collection.Find(ctx, bson.M{
+		"$and": []bson.M{
+			{"owner": owner},
+			{"type": kind},
+		},
+	}, options.Find().SetSort(bson.M{}))
+	if err != nil {
+		return nil, err
+	}
+	var entities []*model.Application
+	if err := cursor.All(ctx, &entities); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, repo.ErrNotFound
+		}
+		return nil, err
+	}
+	return entities, nil
+}
+
+func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicTrue(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"owner": owner},
@@ -112,7 +133,7 @@ func (r *ApplicationRepoerMongo) FindByOwnerAndTypeAndIsPublicTrue(ctx context.C
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerAndTypeAndIsPublicFalse(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicFalse(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"owner": owner},
@@ -154,6 +175,9 @@ func (r *ApplicationRepoerMongo) FindByOwnerAndIsUpdatableTrue(ctx context.Conte
 }
 
 func (r *ApplicationRepoerMongo) InsertOne(ctx context.Context, application *model.Application) (interface{}, error) {
+	t := time.Now()
+	application.CreatedAt = t
+	application.UpdatedAt = t
 	result, err := r.collection.InsertOne(ctx, application)
 	if err != nil {
 		return nil, err
@@ -163,6 +187,7 @@ func (r *ApplicationRepoerMongo) InsertOne(ctx context.Context, application *mod
 }
 
 func (r *ApplicationRepoerMongo) UpdateByID(ctx context.Context, application *model.Application, _id primitive.ObjectID) (bool, error) {
+	application.UpdatedAt = time.Now()
 	result, err := r.collection.UpdateOne(ctx, bson.M{
 		"_id": _id,
 	}, bson.M{
