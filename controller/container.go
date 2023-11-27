@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/ipaas-org/ipaas-backend/model"
@@ -27,6 +28,23 @@ func (c *Controller) GenerateTraefikDnsLables(name, host, port string) []model.K
 		{Key: router + ".rule", Value: "Host(`" + host + "`)"},
 		{Key: service + ".loadbalancer.server.port", Value: port},
 	}
+}
+
+func (c *Controller) createConnectAndStartContainer(ctx context.Context, name, imageID, networkID string, envs, labels []model.KeyValue) (*model.Container, error) {
+	container, err := c.serviceManager.CreateNewContainer(ctx, name, imageID, envs, labels)
+	if err != nil {
+		return nil, err
+	}
+	//connect container to user's network id and set as dns the application name
+	if err := c.serviceManager.ConnectContainerToNetwork(ctx, container.ID, networkID, name); err != nil {
+		return nil, err
+	}
+
+	if err := c.serviceManager.StartContainerByID(ctx, container.ID); err != nil {
+		return nil, err
+	}
+
+	return container, nil
 }
 
 // func (c *Controller) CreateNewContainer(ctx context.Context, kind model.ServiceKind, ownerID, name, image string, env, labels []model.KeyValue) (*model.Container, error) {
