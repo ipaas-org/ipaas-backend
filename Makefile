@@ -42,7 +42,7 @@ build: prep ### build docker image called image-builder
 .PHONY: docker
 
 services: ### start services needed
-	docker-compose up --build --remove-orphans -d db
+	docker-compose up --build --remove-orphans -d db traefik
 .PHONY: services
 
 up: build ### start docker image following docker-compose

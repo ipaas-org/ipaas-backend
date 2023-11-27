@@ -19,12 +19,14 @@ type (
 		RMQ         `yaml:"rabbitmq"`
 		HTTP        `yaml:"http"`
 		Database    `yaml:"database"`
+		Traefik     `yaml:"traefik"`
 	}
 
 	App struct {
 		Name       string `env-required:"true" yaml:"name"    env:"APP_NAME"`
 		Version    string `env-required:"true" yaml:"version" env:"APP_VERSION"`
 		Deployment string `env-required:"true" yaml:"deployment" env:"APP_DEPLOYMENT"`
+		BaseUrl    string `env-required:"true" yaml:"baseUrl" env:"APP_BASE_URL"`
 	}
 
 	Log struct {
@@ -59,6 +61,12 @@ type (
 		Driver string `env-required:"true" yaml:"driver" env:"DATABASE_DRIVER"`
 		URI    string `env:"DATABASE_URI"`
 	}
+
+	Traefik struct {
+		ApiBaseUrl string `env-required:"true" yaml:"apiBaseUrl" env:"TRAEFIK_API_BASE_URL"`
+		Username   string `env:"TRAEFIK_USERNAME"`
+		Password   string `env:"TRAEFIK_PASSWORD"`
+	}
 )
 
 func NewConfig(configPath ...string) (*Config, error) {
@@ -77,7 +85,7 @@ func NewConfig(configPath ...string) (*Config, error) {
 		}
 	}
 
-	mustCheck := []string{"JWT_SECRET", "GIT_PROVIDER_CLIENT_ID", "GIT_PROVIDER_CLIENT_SECRET"}
+	mustCheck := []string{"JWT_SECRET", "GIT_PROVIDER_CLIENT_ID", "GIT_PROVIDER_CLIENT_SECRET", "TRAEFIK_USERNAME", "TRAEFIK_PASSWORD"}
 
 	for _, v := range mustCheck {
 		logrus.Debug(os.Getenv(v))

@@ -1,4 +1,4 @@
-version: "2.3"
+version: "3"
 
 services:
   # go:
@@ -16,7 +16,8 @@ services:
   #     - "ipaas"
   db:
     image: mongo:4.4.6
-    #restart: always
+    # restart: unless-stop
+    container_name: ipaas-db
     environment:
       MONGO_INITDB_ROOT_USERNAME: vano
       MONGO_INITDB_ROOT_PASSWORD: vanovano
@@ -27,6 +28,26 @@ services:
       - ./_volume:/data/db
     networks:
       - "ipaas"
+  traefik:
+    container_name: ipaas-traefik
+    network_mode: host
+    image: traefik:v2.10
+    command:
+      - --log.level=DEBUG
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    # ports:
+    #   - 80:80
+    #   - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/config:/etc/traefik/
+      - ./traefik/log:/var/log/traefik/
+    labels:
+      - traefik.http.routers.traefik.service=api@internal
+
 volumes:
   db:
 

@@ -2,6 +2,7 @@ app:
   name: "ipaas-mono"
   version: "0.1.0"
   deployment: "dev"
+  baseUrl: "http://ipaas.localhost"
 
 rabbitmq:
   requestQueue: request-test
@@ -22,11 +23,11 @@ jwt:
 
 gitProvider:
   provider: "github"
-  redirectUri: "http://localhost:8082/api/v1/oauth/callback"
-  callbackUri: "http://localhost:8082/api/v1/oauth/callback"
+  redirectUri: "/api/v1/oauth/callback"
+  callbackUri: "/api/v1/oauth/callback"
 
 static-images:
-  - "redis:7.2.3-alpine3.18"
+  - "bitnami/redis:7.2.3"
   - "redislabs/redisinsight:1.14.0"
   - "mysql:8.2.0-oracle"
   - "mariadb:11.1.3"
@@ -35,3 +36,7 @@ static-images:
   - "mongo-express:1.0.0-20-alpine3.18"
   - "postgres:16.1"
   - "dpage/pgadmin4:7.8"
+
+
+traefik:
+  apiBaseUrl: "http://traefik.dev.localhost"
