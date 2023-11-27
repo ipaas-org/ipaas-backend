@@ -101,15 +101,15 @@ func (r *RabbitMQ) Close() error {
 
 func (r *RabbitMQ) Start(ctx context.Context, ID int, routineMonitor chan int) {
 	defer func(restarts int) {
-		if err := r.Close(); err != nil {
-			r.l.Errorf("error closing connection with rmq: %v:", err)
-		}
 		r.l.Info("rabbitmq connection closed")
 		rec := recover()
 		r.l.Debug("recover:", rec)
 		if rec != nil {
 			r.l.Error("rabbitmq routine panic:", rec)
 			r.l.Error(string(debug.Stack()))
+		}
+		if err := r.Close(); err != nil {
+			r.l.Errorf("error closing connection with rmq: %v:", err)
 		}
 		if ctx.Err() == nil {
 			//  && restarts <= 5 {
@@ -166,7 +166,7 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 
 			r.l.Debug(response)
 			if response.IsError {
-				r.l.Error("r.Controller: error building image", response.Message)
+				r.l.Error("r.Controller: error building image:", response.Message)
 				r.l.Error("r.Controller: error building image fault:", response.Fault)
 				// if response.Fault == model.ResponseErrorFaultService {
 				// 	//TODO: resend the message to the queue to process again, at least 3 times
