@@ -22,29 +22,31 @@ type (
 	}
 
 	Application struct {
-		ID            primitive.ObjectID `bson:"_id,omitempty" json:"-"`
-		Kind          ServiceKind        `bson:"kind" json:"kind"`
+		ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+		CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
+		UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 		Name          string             `bson:"name" json:"name"`
+		Kind          ServiceKind        `bson:"kind" json:"kind"`
 		DnsName       string             `bson:"dnsName" json:"dnsName"`
 		State         ApplicationState   `bson:"state" json:"state"`
 		Owner         string             `bson:"owner" json:"owner"`
-		CreatedAt     time.Time          `bson:"createdAt" json:"createdAt,omitempty"`
 		ListeningPort string             `bson:"listeningPort" json:"listeningPort"`
 		Description   string             `bson:"description,omitempty" json:"description,omitempty"`
 		GithubRepo    string             `bson:"githubRepo" json:"githubRepo"`
 		GithubBranch  string             `bson:"githubBranch" json:"githubBranch"`
 		BuiltCommit   string             `bson:"builtCommit" json:"builtCommit,omitempty"`
 		IsPublic      bool               `bson:"isPublic" json:"isPublic"`
-		IsUpdatable   bool               `bson:"isUpdatable,omitempty" json:"isUpdatable"`
-		Container     *Container         `bson:"container" json:"container,omitempty"`
-		Envs          []KeyValue         `bson:"envs,omitempty" json:"envs"`
+		IsUpdatable   bool               `bson:"isUpdatable" json:"isUpdatable"`
+		Container     *Container         `bson:"container" json:"-"` //container,omitempty
+		Envs          []KeyValue         `bson:"envs" json:"envs"`
+		BasedOn       string             `bson:"basedOn" json:"basedOn"` //id of the template the application is based on
 		// Image          *Image             `bson:"image" json:"image,omitempty"`
 	}
 )
 
 const (
 	ApplicationKindWeb      ServiceKind = "web"
-	ApplicationKindDatabase ServiceKind = "database"
+	ApplicationKindDatabase ServiceKind = "storage"
 
 	ApplicationStatePending  ApplicationState = "pending"
 	ApplicationStateBuilding ApplicationState = "building"
