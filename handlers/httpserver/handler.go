@@ -57,10 +57,22 @@ func (h *httpHandler) RegisterRoutes() {
 	authUser.POST("/update", h.UpdateUser)
 
 	application := authGroup.Group("/application")
+	application.GET("/list/:kind", h.ListApplications)
+	application.GET("/status/:applicationID", h.GetApplicationStatus)
+	application.GET("/:applicationID", h.GetApplication)
+	// application.GET("/logs/:applicationID", h.GetApplicationLogs)
+	application.DELETE("/delete/:applicationID", h.DeleteApplication)
+	// application.PUT("/update/:applicationID", h.UpdateApplication)
+	application.POST("/new/web", h.NewWebApplication)
+	application.POST("/new/template", h.NewApplicationFromTemplate)
 
-	webApplication := application.Group("/web")
-	webApplication.POST("/new", h.NewWebApplication)
+	// validation := authGroup.Group("/validation")
+	// validation.POST("/name", h.IsNameAvailable)
+	// validation.POST("/repo", h.IsValidGitRepo)
 
+	// templates := authGroup.Group("/templates")
+	// templates.GET("/list", h.ListTemplates)
+	// templates.GET("/:templateID", h.GetTemplate)
 	// //deployment routes
 	// deployment := authGroup.Group("/deployment")
 

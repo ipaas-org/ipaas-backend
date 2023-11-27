@@ -16,16 +16,24 @@ const (
 	ErrInvalidState HttpErrorType = "invalid_state"
 
 	//user related errors
-	ErrInvalidUser                      HttpErrorType = "invalid_user"
-	ErrUserNotFound                     HttpErrorType = "user_not_found"
-	ErrNameAlreadyTaken                 HttpErrorType = "name_already_taken"
-	ErrUnableToBuildImageInCurrentState HttpErrorType = "unable_to_build_image_in_current_state"
+	ErrInvalidUser      HttpErrorType = "invalid_user"
+	ErrUserNotFound     HttpErrorType = "user_not_found"
+	ErrNameAlreadyTaken HttpErrorType = "name_already_taken"
 
 	// application related errors
-	ErrNameTaken HttpErrorType = "name_taken"
+	ErrNameTaken                      HttpErrorType = "name_taken"
+	ErrInvalidApplicationID           HttpErrorType = "invalid_application_id"
+	ErrInexistingApplication          HttpErrorType = "inexisting_application"
+	ErrInvalidOperationInCurrentState HttpErrorType = "invalid_operation_in_current_state"
+
+	//template related errors
+	ErrTemplateCodeNotFound          HttpErrorType = "template_code_not_found"
+	ErrMissingRequiredEnvForTemplate HttpErrorType = "missing_required_env_for_template"
 
 	//http errors
 	ErrInvalidRequestBody HttpErrorType = "invalid_request_body"
 	ErrUnexpected         HttpErrorType = "unexpected_error"
 	ErrNotImplemented     HttpErrorType = "not_implemented"
+	ErrNotFound           HttpErrorType = "not_found"
+	ErrForbidden          HttpErrorType = "forbidden"
 )
