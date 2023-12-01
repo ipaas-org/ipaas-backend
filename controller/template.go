@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
@@ -30,6 +31,11 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 	app.Envs = envs
 	app.BasedOn = template.Code
 
+	c.l.Debugf("default envs: %v", template.DefaultEnvs)
+	if template.DefaultEnvs != nil {
+		app.Envs = append(app.Envs, template.DefaultEnvs...)
+	}
+
 	for _, te := range template.RequiredEnvs {
 		var found bool
 		for _, e := range envs {
@@ -43,10 +49,33 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 		}
 	}
 
+	c.l.Debugf("envs: %v", app.Envs)
+
 	user, err := c.UserRepo.FindByCode(ctx, userCode)
 	if err != nil {
 		c.l.Errorf("error finding user by code: %v", err)
 		return nil, err
+	}
+
+	labels := c.GenerateLabels(name, userCode, app.Kind)
+
+	switch template.Kind {
+	case model.ApplicationKindStorage:
+		if !c.IsNameAvailableUserWide(ctx, name, userCode) {
+			return nil, ErrApplicationNameNotAvailable
+		}
+		app.DnsName = name
+	case model.ApplicationKindManagment:
+		if !c.IsNameAvailableSystemWide(ctx, name) {
+			return nil, ErrApplicationNameNotAvailable
+		}
+		//todo: could also be a random string but for now lets just use the name
+		host := fmt.Sprintf("%s.localhost", app.Name)
+		app.DnsName = host
+
+		labels = append(labels, c.GenerateTraefikDnsLables(name, host, app.ListeningPort)...)
+	default:
+		return nil, ErrUnsupportedApplicationKind
 	}
 
 	if err := c.InsertApplication(ctx, app); err != nil {
@@ -54,9 +83,7 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 		return nil, err
 	}
 
-	labels := c.GenerateLabels(name, userCode, app.Kind)
-
-	container, err := c.createConnectAndStartContainer(ctx, name, template.ImageID, user.NetworkID, envs, labels)
+	container, err := c.createConnectAndStartContainer(ctx, name, template.ImageID, user.NetworkID, app.Envs, labels)
 	if err != nil {
 		c.l.Errorf("error creating container: %v", err)
 		app.State = model.ApplicationStateFailed
@@ -68,7 +95,6 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 
 	app.State = model.ApplicationStateRunning
 	app.Container = container
-	app.DnsName = name
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application: %v", err)
 		return nil, err
