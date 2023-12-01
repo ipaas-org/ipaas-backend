@@ -10,6 +10,7 @@ import (
 
 	"github.com/ipaas-org/ipaas-backend/config"
 	"github.com/ipaas-org/ipaas-backend/controller"
+	events "github.com/ipaas-org/ipaas-backend/handlers/containerEvents"
 	"github.com/ipaas-org/ipaas-backend/handlers/httpserver"
 	"github.com/ipaas-org/ipaas-backend/handlers/rabbitmq"
 	"github.com/ipaas-org/ipaas-backend/pkg/logger"
@@ -28,6 +29,7 @@ const (
 	StartHTTPHandler int = iota + 1
 	StartRMQHandler
 	StartDatabaseCleanupHandler
+	StartContainerEventHandler
 )
 
 func main() {
@@ -100,6 +102,11 @@ func main() {
 	}
 	rmq.Close()
 
+	containerEventHandler, err := events.NewContainerEventHandler(ctx, c, l)
+	if err != nil {
+		l.Fatalf("main - events.NewContainerEventHandler - error creating container event handler: %s", err.Error())
+	}
+
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt,
 		syscall.SIGINT,
@@ -109,6 +116,7 @@ func main() {
 	RoutineMonitor := make(chan int, 100)
 	RoutineMonitor <- StartHTTPHandler
 	RoutineMonitor <- StartRMQHandler
+	RoutineMonitor <- StartContainerEventHandler
 
 	for {
 		select {
@@ -126,6 +134,8 @@ func main() {
 				l.Info("main - rabbitmq finished")
 			case <-httpHandler.Done:
 				l.Info("main - http handler finished")
+			case <-containerEventHandler.Done:
+				l.Info("main - container event handler finished")
 			}
 			//returns 0 because the shutdown was successful
 			os.Exit(0)
@@ -142,6 +152,8 @@ func main() {
 				go rmq.Start(ctx, StartRMQHandler, RoutineMonitor)
 			case StartHTTPHandler:
 				go httpserver.StartRouter(ctx, httpHandler, conf, StartHTTPHandler, RoutineMonitor)
+			case StartContainerEventHandler:
+				go events.StartConainerEventHandler(ctx, containerEventHandler, StartContainerEventHandler, RoutineMonitor)
 			default:
 			}
 		default:
