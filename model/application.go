@@ -45,14 +45,17 @@ type (
 )
 
 const (
-	ApplicationKindWeb      ServiceKind = "web"
-	ApplicationKindDatabase ServiceKind = "storage"
+	ApplicationKindWeb       ServiceKind = "web"
+	ApplicationKindStorage   ServiceKind = "storage"
+	ApplicationKindManagment ServiceKind = "managment"
 
 	ApplicationStatePending  ApplicationState = "pending"
 	ApplicationStateBuilding ApplicationState = "building"
 	ApplicationStateStarting ApplicationState = "starting"
 	ApplicationStateRunning  ApplicationState = "running"
 	ApplicationStateFailed   ApplicationState = "failed"
+	ApplicationStateDeleting ApplicationState = "deleting"
+	ApplicationStateCrashed  ApplicationState = "crashed"
 )
 
 func (s ServiceKind) String() string {
