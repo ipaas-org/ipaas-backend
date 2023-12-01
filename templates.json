@@ -48,24 +48,19 @@
     "documentation": "https://hub.docker.com/r/bitnami/redis"
   },
   {
-    "name": "",
-    "imageName": "",
-    "imageID": "",
-    "listeningPort": "",
-    "requiredEnvs": [
+    "code": "COLIR",
+    "name": "phpmyadmin 5.2.1",
+    "imageName": "phpmyadmin:5.2.1-fpm-alpine",
+    "imageID": "76e6e758a0cb65025013e24c05844c3c02ae33593043d49f060f0c0b2f8f6925",
+    "listeningPort": "80",
+    "defaultEnvs": [
       {
-        "key": "",
-        "value": ""
+        "key": "PMA_ARBITRARY",
+        "value": "1"
       }
     ],
-    "optionalEnvs": [
-      {
-        "key": "",
-        "value": ""
-      }
-    ],
-    "description": "",
-    "kind": "",
+    "description": "PhpMyAdmin Dashboard, to access the database provide the application name as the host and login as root with the password defined in the database template, you can use phpmyadmin to manage MySQL and MariaDB",
+    "kind": "managment",
     "documentation": ""
   },
   {
