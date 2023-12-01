@@ -65,7 +65,7 @@ func (r *ApplicationRepoerMongo) FindByNameAndOwner(ctx context.Context, name, o
 func (r *ApplicationRepoerMongo) FindByContainerID(ctx context.Context, containerID string) (*model.Application, error) {
 	var entity model.Application
 	if err := r.collection.FindOne(ctx, bson.M{
-		"container.containerID": containerID,
+		"container.ID": containerID,
 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
