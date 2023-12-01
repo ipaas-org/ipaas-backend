@@ -13,8 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// todo: is not available when there is a web applpication with the same name
-// todo: skip this step if it is a database
 func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string) bool {
 	_, err := c.ApplicationRepo.FindByName(ctx, name)
 	available := err == repo.ErrNotFound
@@ -213,10 +211,15 @@ func (c *Controller) checkIfTraefikUpdated(ctx context.Context, name string, ret
 func (c *Controller) DeleteApplication(ctx context.Context, application *model.Application) error {
 	//! this version is not able to delete a pending build cause it's unable to delete a message
 	// in the rmq queue, in the next version it will not be a problem cause we will also be able to stop the building process
-	if application.State == model.ApplicationStatePending ||
-		application.State == model.ApplicationStateBuilding ||
+	if application.State == model.ApplicationStateBuilding ||
 		application.State == model.ApplicationStateStarting {
 		return ErrInvalidOperationInCurrentState
+	}
+
+	application.State = model.ApplicationStateDeleting
+	if _, err := c.ApplicationRepo.UpdateByID(ctx, application, application.ID); err != nil {
+		c.l.Errorf("error updating application: %v", err)
+		return err
 	}
 
 	//delete the container
@@ -231,16 +234,38 @@ func (c *Controller) DeleteApplication(ctx context.Context, application *model.A
 			return err
 		}
 
-		//delete the image
-		if err := c.serviceManager.RemoveImageByID(ctx, application.Container.ImageID); err != nil {
-			c.l.Errorf("error removing image[%s] of user %s for applicationg %s: %v", application.Container.ImageID, application.Owner, application.ID.Hex(), err)
-			return err
+		if application.Kind == model.ApplicationKindWeb {
+			//delete the image
+			if err := c.serviceManager.RemoveImageByID(ctx, application.Container.ImageID); err != nil {
+				c.l.Errorf("error removing image[%s] of user %s for applicationg %s: %v", application.Container.ImageID, application.Owner, application.ID.Hex(), err)
+				return err
+			}
 		}
 	}
 
 	//delete the application from the db
 	if _, err := c.ApplicationRepo.DeleteByID(ctx, application.ID); err != nil {
 		c.l.Errorf("error deleting application %s: %v", application.ID.Hex(), err)
+		return err
+	}
+	return nil
+}
+
+func (c *Controller) FailedBuild(ctx context.Context, info *model.BuildResponse) error {
+	appID, err := primitive.ObjectIDFromHex(info.ApplicationID)
+	if err != nil {
+		return err
+	}
+
+	app, err := c.ApplicationRepo.FindByID(ctx, appID)
+	if err != nil {
+		return err
+	}
+
+	app.BuiltCommit = info.BuiltCommit
+	app.State = model.ApplicationStateFailed
+	//TODO: write info.Message in the app logs
+	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		return err
 	}
 	return nil
