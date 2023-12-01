@@ -166,8 +166,8 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 
 			r.l.Debug(response)
 			if response.IsError {
-				r.l.Error("r.Controller: error building image:", response.Message)
-				r.l.Error("r.Controller: error building image fault:", response.Fault)
+				r.l.Info("r.Controller: error building image:", response.Message)
+				r.l.Info("r.Controller: error building image fault:", response.Fault)
 				// if response.Fault == model.ResponseErrorFaultService {
 				// 	//TODO: resend the message to the queue to process again, at least 3 times
 				// 	//if it fails notify the user that the build failed and to try again later
@@ -175,6 +175,9 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 				// 	//TODO: notify the user that the build failed and the reason
 				// 	//build error is in response.Message
 				// }
+				if response.Fault == model.ResponseErrorFaultUser {
+					r.Controller.FailedBuild(ctx, response)
+				}
 				continue
 				// if err := d.Nack(false, false); err != nil {
 				// 	r.l.Errorf("r.Consume.Nack(): %v:", err)
