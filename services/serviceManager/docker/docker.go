@@ -60,7 +60,8 @@ func (d DockerApplicationManager) CreateNewContainer(ctx context.Context, name, 
 	//TODO: should use on failure policy
 	hostConfig := &container.HostConfig{
 		RestartPolicy: container.RestartPolicy{
-			Name: "unless-stopped",
+			Name:              "on-failure",
+			MaximumRetryCount: 3,
 		},
 		Resources: container.Resources{
 			CPUPeriod:         100000,             //100ms
