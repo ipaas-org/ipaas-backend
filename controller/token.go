@@ -19,7 +19,7 @@ func (c *Controller) CreateRefreshToken(ctx context.Context, userCode string) (*
 		return nil, err
 	}
 
-	refreshTokenValue := ran.String()
+	refreshTokenValue := "rf_" + ran.String()
 
 	refreshToken := new(model.RefreshToken)
 	refreshToken.Token = refreshTokenValue
