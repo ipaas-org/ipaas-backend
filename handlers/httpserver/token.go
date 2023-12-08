@@ -6,6 +6,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type (
+	HttpRefreshTokensRequest struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+)
+
 func (h *httpHandler) RefreshTokens(c echo.Context) error {
 	ctx := c.Request().Context()
 
