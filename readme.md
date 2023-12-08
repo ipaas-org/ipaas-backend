@@ -1,47 +1,70 @@
-# IPAAS
+## todo
 
-## Itis Paleocapa As A Service
+how to create an application:
 
-Itis Paleocapa as a Service (abbreviated IPaaS) is a webapp dedicated to the students of the [I.T.I.S. Pietro Paleocapa](https://www.itispaleocapa.edu.it) of Bergamo.
-Through an access guaranteed by [PaleoID](https://github.com/cristianlivella/paleoid-backend), the application allows users to host their web applications on the school server.
+1. give git repo (and branch, defaults to default branch) //it sends a request to backend, returns if the repo exists and if the branch exists (it works for private repo as we use user token)
+2. select a language (or autodetect)
+3. select the port the webserver listens to or use env var $PORT
+4. specify additional env vars (key value pairs)
+5. specify a name of the application (for now it's not used but it will be used to create a dns record) //sends a request to backend to check if the name is available
 
-**Description:**
+backend operations:
 
-As anticipated, the program allows users to distribute their application on the school network servers, thus providing a useful and concrete tool for all the developers inside the institute.
-The main difference compared to other competitors in the sector lies in the simplification of use for students. The only requirement is to have an email from the institution, without requiring a credit card to verify its authenticity.
-Furthermore, IPaaS does not limit the number of applications that can be hosted by a single user, does not impose a maximum hour limit for hosted applications, and does not require payments or subscriptions of any kind.
+1. check that the application name is available
+2. insert the application in the db with status pending
+3. push the application to the image builder queue
+4. image builder gets the application from the queue
+5. image builder update the application status to building
+6. image builder pulls the repo
+7. image builder builds the image
+8. if the build fails and the fault was image builder then retry, if the fault was the user then update the status to failed and send to the queue a message that the build for application xxx failed
+9. if the build is succesful then update the application with the image id to use and sends to the queue a message that the build was succesful
+10. backend receives the message and updates the application status to starting
+11. creates the container given all the info (image id, port, env vars, name)
+12. starts the container
+13. if starting the container fails retry for 3 times then update the status to failed
+14. if the container is running then update the status to running
 
-### Requirements
+for future:
 
-- docker-compose
-- docker: make sure you have sudo privileges on the docker group (check this out to know how to do so [docker post-installation on linux](https://docs.docker.com/engine/install/linux-postinstall/)), if you don't wanna do that tho then run `go build .` and run the binary as sudo
-- required images (to install them run `docker pull <image name>`:
-  - golang:1-alpine3.15
-  - mysql:8.0.28-oracle
-  - mariadb:10.8.2-rc-focal
-  - mongo:5.0.6
+1. specify additional add ons like databases (databases, databases web views, ... (for now only db and db's web views))
+2. add a volume to the application (specify name and mount path)
+   2
 
-### How to use
+## critical
 
-- Make sure to create a .env environent following the .env.example file
-- run `$ docker-compose up --build -d`
-- go run .
+- [x] let user create an application
+- [x] add a service that sets a dns record for an application, for now we make a trasparent one that just returns the ip and port of the application
+- [x] after you create an application return the state of the application and the application id
+- [x] add endpoint to get all the applications of an user
+- [x] let user delete an application
+- [ ] let user forcefully restrt an application
+- [ ] let the user update an application
+  - visibility
+  - name
+  - listening port
+  - envs
+  - branch
+  - code base (based on commit on that branch)
+- [x] application status polling endpoint
+- [x] create a database service
+- [x] add a db system to visualize the database
+- [ ] log reader system (will need pagination)
+- [x] implement a crude version of warden
+- [ ] email sender to user with stuff (db credentials, warden notifications, ...)
 
-_**must create a .env file with the correct configurations**_
+## important
 
-### Example
+- [x] rename oauth service to git provider
+- [ ] add getGitRepos function in oauth service
+- [ ] return the list of repos (name and branches) owned by the user (sorted by latest update)
 
-if you don't have a paleoID identity (an email that has as domain @itispaleocapa.it) but still would
-like to test the application then do a post request to:
-`/api/mock/create`
-with body a raw json with such fields:
-`{ "password":"aNicePassWord", "name": "aNiceName", "userID":"1234" } `
+## performance
 
-Make sure that userID is a number.
-If an error is returned with body `User already exists` it means that another user has that userID so choose another one.
+- [ ] CreateApplicationFromApplicationIDandImageID calls the db too many times, should add a cache layer for the application and the users and update could be more granular so that it doesnt need to retrive the entire application to update it
 
-**This account will be closed after a day of being created as it's a test user used to test to behaviour of the application.**
+## not foundamental
 
-If you prefer there is a web page at /mock where you can create a mock user using a gui.
-
-you can use this repo [vano2903/testing](https://github.com/Vano2903/testing/) as a testing webserver
+- [ ] paginate the list of repos
+- [ ] add git service method that creates a channel for a repo that send info about updates to the repo
+- [ ] repos shouldnt return a bool in updates and delete cause it's not really used
