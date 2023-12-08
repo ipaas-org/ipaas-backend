@@ -70,7 +70,7 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 			return nil, ErrApplicationNameNotAvailable
 		}
 		//todo: could also be a random string but for now lets just use the name
-		host := fmt.Sprintf("%s.localhost", app.Name)
+		host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
 		app.DnsName = host
 
 		labels = append(labels, c.GenerateTraefikDnsLables(name, host, app.ListeningPort)...)
