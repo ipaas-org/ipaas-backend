@@ -48,6 +48,12 @@ type (
 	TemplateRepoer interface {
 		FindByCode(ctx context.Context, code string) (*model.Template, error)
 	}
+
+	TemporaryTokenStorage interface {
+		InsertTokens(ctx context.Context, key string, jwt *model.AccessToken, refresh *model.RefreshToken) error
+		FindByKey(ctx context.Context, key string) (*model.AccessToken, *model.RefreshToken, error)
+		DeleteKey(ctx context.Context, key string) error
+	}
 )
 
 var (
