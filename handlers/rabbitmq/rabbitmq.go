@@ -176,7 +176,9 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 				// 	//build error is in response.Message
 				// }
 				if response.Fault == model.ResponseErrorFaultUser {
-					r.Controller.FailedBuild(ctx, response)
+					if err := r.Controller.FailedBuild(ctx, response); err != nil {
+						r.l.Errorf("error updating build status: %v:", err)
+					}
 				}
 				continue
 				// if err := d.Nack(false, false); err != nil {
