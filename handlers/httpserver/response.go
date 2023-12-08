@@ -1,8 +1,6 @@
 package httpserver
 
 import (
-	"fmt"
-
 	"github.com/labstack/echo/v4"
 )
 
@@ -83,12 +81,12 @@ func respSuccess(c echo.Context, code int, message string, data ...interface{}) 
 	return c.JSON(code, h)
 }
 
-func respSuccessf(c echo.Context, code int, message string, args ...string) error {
-	h := HttpSuccess{
-		Code:    code,
-		IsError: false,
-		Message: fmt.Sprintf(message, args),
-	}
+// func respSuccessf(c echo.Context, code int, message string, args ...string) error {
+// 	h := HttpSuccess{
+// 		Code:    code,
+// 		IsError: false,
+// 		Message: fmt.Sprintf(message, args),
+// 	}
 
-	return c.JSON(code, h)
-}
+// 	return c.JSON(code, h)
+// }
