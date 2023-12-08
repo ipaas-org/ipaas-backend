@@ -11,6 +11,7 @@ const (
 	ErrAccessTokenNotFound        HttpErrorType = "access_token_not_found"
 	ErrInvalidRefreshToken        HttpErrorType = "invalid_refresh_token"
 	ErrRefreshTokenExpired        HttpErrorType = "refresh_token_expired"
+	ErrInvalidKey                 HttpErrorType = "invalid_key"
 
 	//state errors
 	ErrInvalidState HttpErrorType = "invalid_state"
