@@ -23,6 +23,7 @@ type Controller struct {
 	StateRepo       repo.StateRepoer
 	ApplicationRepo repo.ApplicationRepoer
 	TemplateRepo    repo.TemplateRepoer
+	TempTokenRepo   repo.TemporaryTokenStorage
 
 	gitProvider    gitProvider.Provider
 	jwtHandler     *jwt.JWThandler
@@ -37,7 +38,7 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 	switch config.GitProvider.Provider {
 	case gitProvider.ProviderGithub:
 		oauth := config.GitProvider
-		oauth.CallbackUri = config.App.BaseUrl + oauth.CallbackUri
+		oauth.CallbackUri = config.App.ApiUrl + oauth.CallbackUri
 		provider = github.NewGithubOauth(oauth.ClientId, oauth.ClientSecret, oauth.CallbackUri)
 	default:
 		l.Fatalf("Unknown oauth provider: %s", config.GitProvider.Provider)
