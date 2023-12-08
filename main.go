@@ -63,6 +63,10 @@ func main() {
 		if err != nil {
 			l.Fatalf("main - mongo.Connect - error connecting to database: %s", err.Error())
 		}
+		if err := client.Ping(ctx, nil); err != nil {
+			l.Fatalf("main - mongo.Ping - error connecting to database: %s", err.Error())
+		}
+
 		cancel()
 
 		l.Debug("connecting to user collection")
@@ -92,6 +96,9 @@ func main() {
 	default:
 		l.Fatalf("main - unknown database driver: %s", conf.Database.Driver)
 	}
+
+	tempTokenStorage := mock.NewTemporaryTokenRepoer()
+	c.TempTokenRepo = tempTokenStorage
 
 	e := echo.New()
 	httpHandler := httpserver.InitRouter(e, l, c, conf)
