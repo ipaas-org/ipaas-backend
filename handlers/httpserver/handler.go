@@ -1,8 +1,6 @@
 package httpserver
 
 import (
-	"time"
-
 	"github.com/ipaas-org/ipaas-backend/controller"
 	"github.com/labstack/echo/v4"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -11,17 +9,6 @@ import (
 )
 
 type (
-	HttpTokenResponse struct {
-		AccessToken           string    `json:"access_token"`
-		AccessTokenExpiresIn  time.Time `json:"access_token_expires_in"`
-		RefreshToken          string    `json:"refresh_token"`
-		RefreshTokenExpiresIn time.Time `json:"refresh_token_expires_in"`
-	}
-
-	HttpRefreshTokensRequest struct {
-		RefreshToken string `json:"refresh_token"`
-	}
-
 	httpHandler struct {
 		e          *echo.Echo
 		controller *controller.Controller
@@ -47,14 +34,15 @@ func (h *httpHandler) RegisterRoutes() {
 	api := h.e.Group("/api/v1")
 
 	api.GET("/login", h.Login)
+	api.POST("/retriveTokens", h.RetrieveTokens)
 	api.GET("/oauth/callback", h.OauthCallback)
 	api.POST("/token/refresh", h.RefreshTokens)
-	//authenticated user routes
-	authGroup := api.Group("", h.jwtHeaderCheckerMiddleware)
 
-	authUser := authGroup.Group("/user")
-	authUser.GET("/info", h.UserInfo)
-	authUser.POST("/update", h.UpdateUser)
+	authGroup := api.Group("", h.jwtHeaderCheckerMiddleware)
+	//authenticated user routes
+	user := authGroup.Group("/user")
+	user.GET("/info", h.UserInfo)
+	user.POST("/update", h.UpdateUser)
 
 	application := authGroup.Group("/application")
 	application.GET("/list/:kind", h.ListApplications)
