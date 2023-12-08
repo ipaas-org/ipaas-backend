@@ -2,10 +2,7 @@ package controller
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
@@ -123,7 +120,7 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 	}
 	//start a container from the application
 	labels := c.GenerateLabels(app.Name, app.Owner, app.Kind)
-	host := fmt.Sprintf("%s.localhost", app.Name)
+	host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
 	traefikLabels := c.GenerateTraefikDnsLables(app.Name, host, app.ListeningPort)
 	labels = append(labels, traefikLabels...)
 
@@ -161,52 +158,52 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 }
 
 // TODO: this should be a service, like the label generator for traefik
-func (c *Controller) checkIfTraefikUpdated(ctx context.Context, name string, retry int) (bool, error) {
-	//<ip>:<port>/api/http/routers/<name>@docker
-	//returns 404 if traefik didnt update yet
-	//200 after traefik updates
-	url := fmt.Sprintf("%s/api/http/routers/%s@docker", c.traefik.ApiBaseUrl, name)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return false, err
-	}
+// func (c *Controller) checkIfTraefikUpdated(ctx context.Context, name string, retry int) (bool, error) {
+// 	//<ip>:<port>/api/http/routers/<name>@docker
+// 	//returns 404 if traefik didnt update yet
+// 	//200 after traefik updates
+// 	url := fmt.Sprintf("%s/api/http/routers/%s@docker", c.traefik.ApiBaseUrl, name)
+// 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	auth := c.traefik.Username + ":" + c.traefik.Password
-	base64Auth := base64.StdEncoding.EncodeToString([]byte(auth))
-	req.Header.Add("Authorization", "Basic "+base64Auth)
+// 	auth := c.traefik.Username + ":" + c.traefik.Password
+// 	base64Auth := base64.StdEncoding.EncodeToString([]byte(auth))
+// 	req.Header.Add("Authorization", "Basic "+base64Auth)
 
-	client := new(http.Client)
-	counter := 0
-	for {
-		c.l.Debugf("doing request to traefik for %s@docker service", name)
-		resp, err := client.Do(req)
-		if err != nil {
-			c.l.Errorf("error doing request to traefik: %v", err)
-			//internal server error
-			return false, err
-		}
-		body, _ := io.ReadAll(resp.Body)
-		c.l.Debugf("status %d, body: %s", resp.StatusCode, string(body))
-		if resp.StatusCode == 200 {
-			c.l.Debugf("traefik updated successfully for %s@docker service", name)
-			break
-		}
-		if resp.StatusCode != 404 {
-			//internal server error
-			return false, fmt.Errorf("error doing request to traefik: %d %s", resp.StatusCode, body)
-		}
-		if counter >= retry {
-			//internal server error
-			c.l.Debug("traefik did not update in time")
-			return false, nil
-		}
-		c.l.Debugf("traefik did not update yet (current try %d), retrying in 5 second", counter)
-		counter++
-		time.Sleep(5 * time.Second)
-		continue
-	}
-	return true, nil
-}
+// 	client := new(http.Client)
+// 	counter := 0
+// 	for {
+// 		c.l.Debugf("doing request to traefik for %s@docker service", name)
+// 		resp, err := client.Do(req)
+// 		if err != nil {
+// 			c.l.Errorf("error doing request to traefik: %v", err)
+// 			//internal server error
+// 			return false, err
+// 		}
+// 		body, _ := io.ReadAll(resp.Body)
+// 		c.l.Debugf("status %d, body: %s", resp.StatusCode, string(body))
+// 		if resp.StatusCode == 200 {
+// 			c.l.Debugf("traefik updated successfully for %s@docker service", name)
+// 			break
+// 		}
+// 		if resp.StatusCode != 404 {
+// 			//internal server error
+// 			return false, fmt.Errorf("error doing request to traefik: %d %s", resp.StatusCode, body)
+// 		}
+// 		if counter >= retry {
+// 			//internal server error
+// 			c.l.Debug("traefik did not update in time")
+// 			return false, nil
+// 		}
+// 		c.l.Debugf("traefik did not update yet (current try %d), retrying in 5 second", counter)
+// 		counter++
+// 		time.Sleep(5 * time.Second)
+// 		continue
+// 	}
+// 	return true, nil
+// }
 
 func (c *Controller) DeleteApplication(ctx context.Context, application *model.Application) error {
 	//! this version is not able to delete a pending build cause it's unable to delete a message
