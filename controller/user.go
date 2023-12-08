@@ -25,7 +25,7 @@ func (c *Controller) createNewUserCode(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return ran.String(), nil
+	return "us_" + ran.String(), nil
 }
 
 // todo: create user should generate the user not ask for a user model
