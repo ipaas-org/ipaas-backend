@@ -37,8 +37,8 @@ update: ### update dependencies
 	go get -u -v
 .PHONY: update
 
-build: prep ### build docker image called image-builder
-	docker build -t image-builder .
+build: prep ### build docker image called ipaas
+	docker build -t ipaas .
 .PHONY: docker
 
 services: ### start services needed
