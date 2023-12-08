@@ -23,10 +23,12 @@ type (
 	}
 
 	App struct {
-		Name       string `env-required:"true" yaml:"name"    env:"APP_NAME"`
-		Version    string `env-required:"true" yaml:"version" env:"APP_VERSION"`
-		Deployment string `env-required:"true" yaml:"deployment" env:"APP_DEPLOYMENT"`
-		BaseUrl    string `env-required:"true" yaml:"baseUrl" env:"APP_BASE_URL"`
+		Name              string `env-required:"true" yaml:"name"    env:"APP_NAME"`
+		Version           string `env-required:"true" yaml:"version" env:"APP_VERSION"`
+		Deployment        string `env-required:"true" yaml:"deployment" env:"APP_DEPLOYMENT"`
+		ApiUrl            string `env-required:"true" yaml:"apiUrl" env:"APP_API_URL"`
+		FrontendUrl       string `env-required:"true" yaml:"frontendUrl" env:"APP_FRONTEND_URL"`
+		BaseDefaultDomain string `env-required:"true" yaml:"baseDefaultDomain" env:"APP_BASE_DEFAULT_DOMAIN"`
 	}
 
 	Log struct {
