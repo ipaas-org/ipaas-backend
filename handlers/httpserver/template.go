@@ -13,6 +13,16 @@ type (
 		TemplateCode string           `json:"templateCode"`
 		Envs         []model.KeyValue `json:"envs,omitempty"`
 	}
+
+	HttpTemplate struct {
+		Code          string            `json:"code"`
+		Name          string            `json:"name"`
+		RequiredEnvs  []model.KeyValue  `json:"requiredEnvs"`
+		OptionalEnvs  []model.KeyValue  `json:"optionalEnvs"`
+		Description   string            `json:"description"`
+		Documentation string            `json:"documentation"`
+		Kind          model.ServiceKind `json:"kind"`
+	}
 )
 
 func (h *httpHandler) NewApplicationFromTemplate(c echo.Context) error {
@@ -54,5 +64,50 @@ func (h *httpHandler) NewApplicationFromTemplate(c echo.Context) error {
 		"state":         app.State,
 	}
 	return respSuccess(c, 200, "application created successfully", resp)
+}
 
+func (h *httpHandler) ListTemplates(c echo.Context) error {
+	ctx := c.Request().Context()
+	templates, err := h.controller.ListTemplates(ctx)
+	if err != nil {
+		return respError(c, 500, "unexpected error", "", ErrUnexpected)
+	}
+	var respTemplates []*HttpTemplate
+	for _, t := range templates {
+		respTemplates = append(respTemplates, &HttpTemplate{
+			Code:          t.Code,
+			Name:          t.Name,
+			RequiredEnvs:  t.RequiredEnvs,
+			OptionalEnvs:  t.OptionalEnvs,
+			Description:   t.Description,
+			Documentation: t.Documentation,
+			Kind:          t.Kind,
+		})
+	}
+	return respSuccess(c, 200, "templates listed successfully", respTemplates)
+}
+
+func (h *httpHandler) GetTemplate(c echo.Context) error {
+	ctx := c.Request().Context()
+	code := c.Param("code")
+	if code == "" {
+		return respError(c, 400, "invalid template code", "template code is required", ErrTemplateCodeNotFound)
+	}
+	template, err := h.controller.GetTemplateByCode(ctx, code)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			return respError(c, 400, "template code not found", "this template code is not found, make sure the right one was selected", ErrTemplateCodeNotFound)
+		}
+		return respError(c, 500, "unexpected error", "", ErrUnexpected)
+	}
+	resp := &HttpTemplate{
+		Code:          template.Code,
+		Name:          template.Name,
+		RequiredEnvs:  template.RequiredEnvs,
+		OptionalEnvs:  template.OptionalEnvs,
+		Description:   template.Description,
+		Documentation: template.Documentation,
+		Kind:          template.Kind,
+	}
+	return respSuccess(c, 200, "template retrieved successfully", resp)
 }

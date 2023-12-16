@@ -54,13 +54,13 @@ func (h *httpHandler) RegisterRoutes() {
 	application.POST("/new/web", h.NewWebApplication)
 	application.POST("/new/template", h.NewApplicationFromTemplate)
 
-	// validation := authGroup.Group("/validation")
-	// validation.POST("/name", h.IsNameAvailable)
-	// validation.POST("/repo", h.IsValidGitRepo)
+	validate := authGroup.Group("/validate")
+	validate.POST("/name", h.IsValidName)
+	validate.POST("/repo", h.IsValidGitRepo)
 
-	// templates := authGroup.Group("/templates")
-	// templates.GET("/list", h.ListTemplates)
-	// templates.GET("/:templateID", h.GetTemplate)
+	templates := api.Group("/templates")
+	templates.GET("/list", h.ListTemplates)
+	templates.GET("/:code", h.GetTemplate)
 	// //deployment routes
 	// deployment := authGroup.Group("/deployment")
 
