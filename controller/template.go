@@ -82,7 +82,7 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 		c.l.Errorf("error inserting application: %v", err)
 		return nil, err
 	}
-
+	c.l.Debugf("template: %+v", template)
 	container, err := c.createConnectAndStartContainer(ctx, name, template.ImageID, user.NetworkID, app.Envs, labels)
 	if err != nil {
 		c.l.Errorf("error creating container: %v", err)
@@ -110,4 +110,13 @@ func (c *Controller) GetTemplateByCode(ctx context.Context, code string) (*model
 		return nil, err
 	}
 	return template, nil
+}
+
+func (c *Controller) ListTemplates(ctx context.Context) ([]*model.Template, error) {
+	templates, err := c.TemplateRepo.FindAllAvailable(ctx)
+	if err != nil {
+		c.l.Errorf("error finding templates: %v", err)
+		return nil, err
+	}
+	return templates, nil
 }
