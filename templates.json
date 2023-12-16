@@ -1,5 +1,6 @@
 [
   {
+    "available": true,
     "code": "EUSUG",
     "name": "mysql 8.2.0",
     "imageName": "mysql:8.2.0-oracle",
@@ -31,6 +32,7 @@
     "documentation": "https://hub.docker.com/_/mysql"
   },
   {
+    "available": true,
     "code": "MRNRH",
     "name": "redis 7.2.3",
     "imageName": "bitnami/redis:7.2.3",
@@ -48,6 +50,7 @@
     "documentation": "https://hub.docker.com/r/bitnami/redis"
   },
   {
+    "available": true,
     "code": "COLIR",
     "name": "phpmyadmin 5.2.1",
     "imageName": "phpmyadmin:5.2.1-fpm-alpine",
