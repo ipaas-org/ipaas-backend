@@ -2,6 +2,7 @@ package model
 
 type Template struct {
 	Code            string      `bson:"code" json:"code"`
+	Available       bool        `bson:"available" json:"available"`
 	Name            string      `bson:"name" json:"name"`
 	ImageName       string      `bson:"imageName" json:"-"`
 	ImageID         string      `bson:"imageID" json:"-"`

@@ -47,6 +47,8 @@ type (
 
 	TemplateRepoer interface {
 		FindByCode(ctx context.Context, code string) (*model.Template, error)
+		FindAll(ctx context.Context) ([]*model.Template, error)
+		FindAllAvailable(ctx context.Context) ([]*model.Template, error)
 	}
 
 	TemporaryTokenStorage interface {

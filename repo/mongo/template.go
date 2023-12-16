@@ -32,3 +32,29 @@ func (r *TemplateRepoerMongo) FindByCode(ctx context.Context, code string) (*mod
 	}
 	return &entity, nil
 }
+
+func (r *TemplateRepoerMongo) FindAll(ctx context.Context) ([]*model.Template, error) {
+	var entities []*model.Template
+	cursor, err := r.collection.Find(ctx, bson.M{}, options.Find().SetSort(bson.M{}))
+	if err != nil {
+		return nil, err
+	}
+	if err := cursor.All(ctx, &entities); err != nil {
+		return nil, err
+	}
+	return entities, nil
+}
+
+func (r *TemplateRepoerMongo) FindAllAvailable(ctx context.Context) ([]*model.Template, error) {
+	var entities []*model.Template
+	cursor, err := r.collection.Find(ctx, bson.M{
+		"available": true,
+	}, options.Find().SetSort(bson.M{}))
+	if err != nil {
+		return nil, err
+	}
+	if err := cursor.All(ctx, &entities); err != nil {
+		return nil, err
+	}
+	return entities, nil
+}
