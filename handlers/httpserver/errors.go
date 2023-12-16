@@ -37,4 +37,7 @@ const (
 	ErrNotImplemented     HttpErrorType = "not_implemented"
 	ErrNotFound           HttpErrorType = "not_found"
 	ErrForbidden          HttpErrorType = "forbidden"
+
+	//git providers errors
+	ErrRateLimitReached HttpErrorType = "rate_limit_reached"
 )
