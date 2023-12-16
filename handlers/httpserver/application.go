@@ -12,10 +12,10 @@ import (
 
 type (
 	HttpWebApplicationPost struct {
-		Name        string           `json:"name"`
-		Repo        string           `json:"repo"`
-		Branch      string           `json:"branch"`
-		Language    string           `json:"language"`
+		Name   string `json:"name"`
+		Repo   string `json:"repo"`
+		Branch string `json:"branch"`
+		// Language    string           `json:"language"`
 		Port        string           `json:"port"`
 		Description string           `json:"description,omitempty"`
 		Envs        []model.KeyValue `json:"envs,omitempty"`
@@ -42,9 +42,9 @@ func (h *httpHandler) NewWebApplication(c echo.Context) error {
 
 	post := new(HttpWebApplicationPost)
 	if err := c.Bind(post); err != nil {
+		h.l.Debugf("error binding request body: %v", err)
 		return respError(c, 400, "invalid request body", "", ErrInvalidRequestBody)
 	}
-
 	if !h.controller.IsNameAvailableSystemWide(ctx, post.Name) {
 		return respError(c, 400, "name taken", "name not available as it's already been taken", ErrNameTaken)
 	}
