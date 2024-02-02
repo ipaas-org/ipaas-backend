@@ -221,12 +221,12 @@ func (c *Controller) DeleteApplication(ctx context.Context, application *model.A
 
 	//delete the container
 	if application.Container != nil {
-		if err := c.serviceManager.StopContainerByID(ctx, application.Container.ID); err != nil {
+		if err := c.serviceManager.StopServiceByID(ctx, application.Container.ID); err != nil {
 			c.l.Errorf("error stopping container[%s] of user %s for application %s: %v", application.Container.ID, application.Owner, application.ID.Hex(), err)
 			return err
 		}
 
-		if err := c.serviceManager.RemoveContainerByID(ctx, application.Container.ID, false); err != nil {
+		if err := c.serviceManager.RemoveServiceByID(ctx, application.Container.ID, false); err != nil {
 			c.l.Errorf("error removing container[%s] of user %s for application %s: %v", application.Container.ID, application.Owner, application.ID.Hex(), err)
 			return err
 		}
