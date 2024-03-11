@@ -15,13 +15,13 @@ type (
 	}
 
 	HttpTemplate struct {
-		Code          string            `json:"code"`
-		Name          string            `json:"name"`
-		RequiredEnvs  []model.KeyValue  `json:"requiredEnvs"`
-		OptionalEnvs  []model.KeyValue  `json:"optionalEnvs"`
-		Description   string            `json:"description"`
-		Documentation string            `json:"documentation"`
-		Kind          model.ServiceKind `json:"kind"`
+		Code          string                `json:"code"`
+		Name          string                `json:"name"`
+		RequiredEnvs  []model.KeyValue      `json:"requiredEnvs"`
+		OptionalEnvs  []model.KeyValue      `json:"optionalEnvs"`
+		Description   string                `json:"description"`
+		Documentation string                `json:"documentation"`
+		Kind          model.ApplicationKind `json:"kind"`
 	}
 )
 

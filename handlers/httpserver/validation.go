@@ -8,8 +8,8 @@ import (
 
 type (
 	HttpNameValidationgRequest struct {
-		Kind model.ServiceKind `json:"kind"`
-		Name string            `json:"name"`
+		Kind model.ApplicationKind `json:"kind"`
+		Name string                `json:"name"`
 	}
 
 	HttpNameValidatingResponse struct {
