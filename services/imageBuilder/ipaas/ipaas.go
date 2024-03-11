@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ipaas-org/ipaas-backend/model"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
