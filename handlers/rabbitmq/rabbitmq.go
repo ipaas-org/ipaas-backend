@@ -8,8 +8,8 @@ import (
 
 	"github.com/ipaas-org/ipaas-backend/controller"
 	"github.com/ipaas-org/ipaas-backend/model"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
-	"github.com/streadway/amqp"
 )
 
 type RabbitMQ struct {
@@ -187,7 +187,7 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 				// }
 			}
 
-			if err := r.Controller.CreateApplicationFromApplicationIDandImageID(ctx, response.ApplicationID, response.ImageID, response.BuiltCommit); err != nil {
+			if err := r.Controller.CreateApplicationFromApplicationIDandImageID(ctx, response.ApplicationID, response.ImageName, response.BuiltCommit); err != nil {
 				r.l.Errorf("error creating application after image builder response %v:", err)
 				// if err := d.Nack(false, false); err != nil {
 				// 	r.l.Errorf("r.Consume.Nack(): %v:", err)
