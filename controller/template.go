@@ -83,7 +83,7 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 		return nil, err
 	}
 	c.l.Debugf("template: %+v", template)
-	container, err := c.createConnectAndStartContainer(ctx, name, template.ImageID, user.NetworkID, app.Envs, labels)
+	// container, err := c.createConnectAndStartContainer(ctx, name, template.ImageID, user.Namespace, app.Envs, labels)
 	if err != nil {
 		c.l.Errorf("error creating container: %v", err)
 		app.State = model.ApplicationStateFailed
@@ -94,7 +94,7 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 	}
 
 	app.State = model.ApplicationStateRunning
-	app.Container = container
+	app.Service = nil
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application: %v", err)
 		return nil, err

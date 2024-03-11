@@ -25,13 +25,13 @@ func (c *Controller) createNewUserCode(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return "us_" + ran.String(), nil
+	return "us-" + ran.String(), nil
 }
 
 // todo: create user should generate the user not ask for a user model
 // todo: separate create user to generate user model (it can ask for the user info but it needs to create the user code and network id,...)
 // todo: create insert user function that adds to repo
-func (c *Controller) CreateUser(ctx context.Context, info *model.UserInfo, role model.Role, networkID string) (*model.User, error) {
+func (c *Controller) CreateUser(ctx context.Context, info *model.UserInfo, role model.Role) (*model.User, error) {
 	user := new(model.User)
 	user.Info = info
 
@@ -41,14 +41,18 @@ func (c *Controller) CreateUser(ctx context.Context, info *model.UserInfo, role 
 	}
 	user.Code = userCode
 
-	if networkID == "" {
-		networkID, err = c.serviceManager.CreateNewNetwork(ctx, userCode)
-		if err != nil {
-			c.l.Errorf("error creating new network: %v", err)
-			return nil, err
-		}
+	namespace := "ns-" + userCode
+	// networkID, err = c.serviceManager.CreateNewNetwork(ctx, userCode)
+	if err := c.serviceManager.CreateNewNamespace(ctx, namespace, info.Username, staticTempEnvironment); err != nil {
+		c.l.Errorf("error creating new network: %v", err)
+		return nil, err
 	}
-	user.NetworkID = networkID
+	user.Namespace = namespace
+
+	if _, err := c.serviceManager.CreateNewRegistrySecret(ctx, namespace, c.config.K8s.RegistryUrl, c.config.K8s.RegistryUsername, c.config.K8s.RegistryPassword); err != nil {
+		c.l.Errorf("error creating new registry secret: %v", err)
+		return nil, err
+	}
 
 	if role == "" {
 		role = model.RoleUser

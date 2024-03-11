@@ -1,13 +1,12 @@
 package controller
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/ipaas-org/ipaas-backend/model"
 )
 
-func (c *Controller) GenerateLabels(name, ownerID string, serviceKind model.ServiceKind) []model.KeyValue {
+func (c *Controller) GenerateLabels(name, ownerID string, serviceKind model.ApplicationKind) []model.KeyValue {
 	return []model.KeyValue{
 		{Key: "org.ipaas.service.name", Value: name},
 		{Key: "org.ipaas.service.owner", Value: ownerID},
@@ -30,23 +29,23 @@ func (c *Controller) GenerateTraefikDnsLables(name, host, port string) []model.K
 	}
 }
 
-func (c *Controller) createConnectAndStartContainer(ctx context.Context, name, imageID, networkID string, envs, labels []model.KeyValue) (*model.Container, error) {
-	c.l.Debugf("creating new container with name: %s, image: %s, envs: %v, labels: %v", name, imageID, envs, labels)
-	container, err := c.serviceManager.CreateNewService(ctx, name, imageID, envs, labels)
-	if err != nil {
-		return nil, err
-	}
-	//connect container to user's network id and set as dns the application name
-	if err := c.serviceManager.ConnectServiceToNetwork(ctx, container.ID, networkID, name); err != nil {
-		return nil, err
-	}
+// func (c *Controller) createConnectAndStartContainer(ctx context.Context, name, imageID, networkID string, envs, labels []model.KeyValue) (*model.Container, error) {
+// 	c.l.Debugf("creating new container with name: %s, image: %s, envs: %v, labels: %v", name, imageID, envs, labels)
+// 	container, err := c.serviceManager.CreateNewService(ctx, name, imageID, envs, labels)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	//connect container to user's network id and set as dns the application name
+// 	if err := c.serviceManager.ConnectServiceToNetwork(ctx, container.ID, networkID, name); err != nil {
+// 		return nil, err
+// 	}
 
-	if err := c.serviceManager.StartServiceByID(ctx, container.ID); err != nil {
-		return nil, err
-	}
+// 	if err := c.serviceManager.StartServiceByID(ctx, container.ID); err != nil {
+// 		return nil, err
+// 	}
 
-	return container, nil
-}
+// 	return container, nil
+// }
 
 // func (c *Controller) CreateNewContainer(ctx context.Context, kind model.ServiceKind, ownerID, name, image string, env, labels []model.KeyValue) (*model.Container, error) {
 // 	return c.serviceManager.CreateNewContainer(ctx, name, image, env, labels)
