@@ -3,7 +3,6 @@ package httpserver
 import (
 	"fmt"
 
-	"github.com/ipaas-org/ipaas-backend/controller"
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
 	"github.com/labstack/echo/v4"
@@ -115,7 +114,7 @@ func (h *httpHandler) ListApplications(c echo.Context) error {
 		apps, err = h.controller.GetAllUserApplications(ctx, user.Code)
 		msg = "list of all the applications"
 	} else {
-		apps, err = h.controller.GetApplicationByKind(ctx, user.Code, model.ServiceKind(kind))
+		apps, err = h.controller.GetApplicationByKind(ctx, user.Code, model.ApplicationKind(kind))
 		msg = fmt.Sprintf("list of all the applications of kind [%s]", kind)
 	}
 
@@ -188,15 +187,16 @@ func (h *httpHandler) DeleteApplication(c echo.Context) error {
 	if user.Code != app.Owner {
 		return respError(c, 403, "forbidden", "you are not allowed to delete this application", ErrForbidden)
 	}
-
-	if err := h.controller.DeleteApplication(ctx, app); err != nil {
-		switch err {
-		case controller.ErrInvalidOperationInCurrentState:
-			return respError(c, 400, "invalid operation in current state", "the application is in a state that does not allow this operation", ErrInvalidOperationInCurrentState)
-		default:
-			return respError(c, 500, "unexpected error", "", ErrUnexpected)
-		}
-	}
+	//todo
+	return respError(c, 501, "not implemented", "", ErrNotImplemented)
+	// if err := h.controller.DeleteApplication(ctx, app); err != nil {
+	// 	switch err {
+	// 	case controller.ErrInvalidOperationInCurrentState:
+	// 		return respError(c, 400, "invalid operation in current state", "the application is in a state that does not allow this operation", ErrInvalidOperationInCurrentState)
+	// 	default:
+	// 		return respError(c, 500, "unexpected error", "", ErrUnexpected)
+	// 	}
+	// }
 	return respSuccess(c, 200, "application deleted successfully", nil)
 }
 
