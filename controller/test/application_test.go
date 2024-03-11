@@ -112,7 +112,7 @@ func TestIsNameAvailableUserWide(t *testing.T) {
 	info := &model.UserInfo{
 		Username: "test-user",
 	}
-	user, err := c.CreateUser(ctx, info, model.RoleTesting, "")
+	user, err := c.CreateUser(ctx, info, model.RoleTesting)
 	if err != nil {
 		t.Error(err)
 	}
