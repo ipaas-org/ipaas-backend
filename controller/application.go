@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
@@ -37,7 +38,7 @@ func (c *Controller) GetAllUserApplications(ctx context.Context, userCode string
 }
 
 // this function returns all the application of the user given the kind of the application
-func (c *Controller) GetApplicationByKind(ctx context.Context, userCode string, kind model.ServiceKind) ([]*model.Application, error) {
+func (c *Controller) GetApplicationByKind(ctx context.Context, userCode string, kind model.ApplicationKind) ([]*model.Application, error) {
 	return c.ApplicationRepo.FindByOwnerAndKind(ctx, userCode, kind)
 }
 
@@ -85,7 +86,7 @@ func (c *Controller) CreateNewWebApplication(ctx context.Context, userCode, prov
 	return app, nil
 }
 
-func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Context, applicationID, imageID, BuildCommit string) error {
+func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Context, applicationID, registryImage, BuildCommit string) error {
 	//convert the app id to primitive object id
 	appID, err := primitive.ObjectIDFromHex(applicationID)
 	if err != nil {
@@ -110,7 +111,7 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 		return err
 	}
 
-	c.l.Infof("create the container for %s[%s]", app.Name, app.ID)
+	c.l.Infof("create the container for %s[%s]", app.Name, app.ID.Hex())
 	//update status of application to starting and set the built commit to builtCommit
 	app.State = model.ApplicationStateStarting
 	app.BuiltCommit = BuildCommit
@@ -119,20 +120,49 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 		return err
 	}
 	//start a container from the application
-	labels := c.GenerateLabels(app.Name, app.Owner, app.Kind)
+	// labels := c.GenerateLabels(app.Name, app.Owner, app.Kind)
 	host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
-	traefikLabels := c.GenerateTraefikDnsLables(app.Name, host, app.ListeningPort)
-	labels = append(labels, traefikLabels...)
+	// traefikLabels := c.GenerateTraefikDnsLables(app.Name, host, app.ListeningPort)
+	// labels = append(labels, traefikLabels...)
 
-	container, err := c.createConnectAndStartContainer(ctx, app.Name, imageID, user.NetworkID, app.Envs, labels)
+	p, err := strconv.Atoi(app.ListeningPort)
 	if err != nil {
-		c.l.Errorf("error creating container: %v", err)
+		c.l.Errorf("error converting port to int: %v", err)
+		return err
+	}
+	intPort := int32(p)
+	// container, err := c.createConnectAndStartContainer(ctx, app.Name, imageID, user.Namespace, app.Envs, labels)
+	deployment, err := c.serviceManager.CreateDeployment(ctx, user.Namespace, "deploy-"+app.Name, app.Name, user.Code, staticTempEnvironment, "public", registryImage, 1, intPort, app.Envs)
+	if err != nil {
+		c.l.Errorf("error creating deployment: %v", err)
 		app.State = model.ApplicationStateFailed
 		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 			c.l.Errorf("error updating application: %v", err)
 		}
 		return err
 	}
+
+	service, err := c.serviceManager.CreateService(ctx, user.Namespace, "svc-"+app.Name, app.Name, user.Code, staticTempEnvironment, "public", intPort)
+	if err != nil {
+		c.l.Errorf("error creating service: %v", err)
+		app.State = model.ApplicationStateFailed
+		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+			c.l.Errorf("error updating application: %v", err)
+		}
+		return err
+	}
+	service.Deployment = deployment
+
+	ingressRoute, err := c.serviceManager.CreateIngressRoute(ctx, user.Namespace, "ingressroute-"+app.Name, app.Name, user.Code, staticTempEnvironment, "public", host, "svc-"+app.Name)
+	if err != nil {
+		c.l.Errorf("error creating ingress route: %v", err)
+		app.State = model.ApplicationStateFailed
+		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+			c.l.Errorf("error updating application: %v", err)
+		}
+		return err
+	}
+	service.IngressRoute = ingressRoute
 
 	//todo: this works but idk if it's timing based or there is a better way of doing it
 	//todo: so for now we will just tell the user to wait a few seconds for our dns to update
@@ -147,7 +177,7 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 
 	//update the application with the container informations and status running
 	app.State = model.ApplicationStateRunning
-	app.Container = container
+	app.Service = service
 	app.DnsName = host
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application: %v", err)
@@ -156,54 +186,6 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 
 	return nil
 }
-
-// TODO: this should be a service, like the label generator for traefik
-// func (c *Controller) checkIfTraefikUpdated(ctx context.Context, name string, retry int) (bool, error) {
-// 	//<ip>:<port>/api/http/routers/<name>@docker
-// 	//returns 404 if traefik didnt update yet
-// 	//200 after traefik updates
-// 	url := fmt.Sprintf("%s/api/http/routers/%s@docker", c.traefik.ApiBaseUrl, name)
-// 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-// 	if err != nil {
-// 		return false, err
-// 	}
-
-// 	auth := c.traefik.Username + ":" + c.traefik.Password
-// 	base64Auth := base64.StdEncoding.EncodeToString([]byte(auth))
-// 	req.Header.Add("Authorization", "Basic "+base64Auth)
-
-// 	client := new(http.Client)
-// 	counter := 0
-// 	for {
-// 		c.l.Debugf("doing request to traefik for %s@docker service", name)
-// 		resp, err := client.Do(req)
-// 		if err != nil {
-// 			c.l.Errorf("error doing request to traefik: %v", err)
-// 			//internal server error
-// 			return false, err
-// 		}
-// 		body, _ := io.ReadAll(resp.Body)
-// 		c.l.Debugf("status %d, body: %s", resp.StatusCode, string(body))
-// 		if resp.StatusCode == 200 {
-// 			c.l.Debugf("traefik updated successfully for %s@docker service", name)
-// 			break
-// 		}
-// 		if resp.StatusCode != 404 {
-// 			//internal server error
-// 			return false, fmt.Errorf("error doing request to traefik: %d %s", resp.StatusCode, body)
-// 		}
-// 		if counter >= retry {
-// 			//internal server error
-// 			c.l.Debug("traefik did not update in time")
-// 			return false, nil
-// 		}
-// 		c.l.Debugf("traefik did not update yet (current try %d), retrying in 5 second", counter)
-// 		counter++
-// 		time.Sleep(5 * time.Second)
-// 		continue
-// 	}
-// 	return true, nil
-// }
 
 func (c *Controller) DeleteApplication(ctx context.Context, application *model.Application) error {
 	//! this version is not able to delete a pending build cause it's unable to delete a message
@@ -220,25 +202,25 @@ func (c *Controller) DeleteApplication(ctx context.Context, application *model.A
 	}
 
 	//delete the container
-	if application.Container != nil {
-		if err := c.serviceManager.StopServiceByID(ctx, application.Container.ID); err != nil {
-			c.l.Errorf("error stopping container[%s] of user %s for application %s: %v", application.Container.ID, application.Owner, application.ID.Hex(), err)
-			return err
-		}
+	// if application.Implementation != nil {
+	// 	if err := c.serviceManager.StopServiceByID(ctx, application.Implementation.ID); err != nil {
+	// 		c.l.Errorf("error stopping container[%s] of user %s for application %s: %v", application.Implementation.ID, application.Owner, application.ID.Hex(), err)
+	// 		return err
+	// 	}
 
-		if err := c.serviceManager.RemoveServiceByID(ctx, application.Container.ID, false); err != nil {
-			c.l.Errorf("error removing container[%s] of user %s for application %s: %v", application.Container.ID, application.Owner, application.ID.Hex(), err)
-			return err
-		}
+	// 	if err := c.serviceManager.RemoveServiceByID(ctx, application.Implementation.ID, false); err != nil {
+	// 		c.l.Errorf("error removing container[%s] of user %s for application %s: %v", application.Implementation.ID, application.Owner, application.ID.Hex(), err)
+	// 		return err
+	// 	}
 
-		if application.Kind == model.ApplicationKindWeb {
-			//delete the image
-			if err := c.serviceManager.RemoveImageByID(ctx, application.Container.ImageID); err != nil {
-				c.l.Errorf("error removing image[%s] of user %s for applicationg %s: %v", application.Container.ImageID, application.Owner, application.ID.Hex(), err)
-				return err
-			}
-		}
-	}
+	// 	if application.Kind == model.ApplicationKindWeb {
+	// 		//delete the image
+	// 		if err := c.serviceManager.RemoveImageByID(ctx, application.Implementation.ImageID); err != nil {
+	// 			c.l.Errorf("error removing image[%s] of user %s for applicationg %s: %v", application.Implementation.ImageID, application.Owner, application.ID.Hex(), err)
+	// 			return err
+	// 		}
+	// 	}
+	// }
 
 	//delete the application from the db
 	if _, err := c.ApplicationRepo.DeleteByID(ctx, application.ID); err != nil {
