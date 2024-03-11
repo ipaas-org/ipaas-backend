@@ -89,7 +89,7 @@ func (h *httpHandler) OauthCallback(c echo.Context) error {
 
 	if !found {
 		h.l.Infof("user [%s] not found, creating new user", info.Email)
-		user, err = h.controller.CreateUser(ctx, info, "", "")
+		user, err = h.controller.CreateUser(ctx, info, "")
 		if err != nil {
 			h.l.Errorf("error creating new user: %v", err)
 			return respError(c, 500, "unexpected error", "", ErrUnexpected)
