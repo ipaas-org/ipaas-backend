@@ -10,9 +10,12 @@ import (
 	"github.com/ipaas-org/ipaas-backend/services/gitProvider/github"
 	"github.com/ipaas-org/ipaas-backend/services/imageBuilder"
 	"github.com/ipaas-org/ipaas-backend/services/imageBuilder/ipaas"
-	"github.com/ipaas-org/ipaas-backend/services/serviceManager"
-	"github.com/ipaas-org/ipaas-backend/services/serviceManager/docker"
+	k8smanager "github.com/ipaas-org/ipaas-backend/services/serviceManager/k8s"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	staticTempEnvironment = "prod"
 )
 
 type Controller struct {
@@ -27,9 +30,10 @@ type Controller struct {
 
 	gitProvider    gitProvider.Provider
 	jwtHandler     *jwt.JWThandler
-	serviceManager serviceManager.ServiceManager
+	serviceManager *k8smanager.K8sOrchestratedServiceManager
 	app            config.App
 	traefik        config.Traefik
+	config         *config.Config
 	imageBuilder   imageBuilder.ImageBuilder
 }
 
@@ -44,9 +48,17 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 		l.Fatalf("Unknown oauth provider: %s", config.GitProvider.Provider)
 	}
 
-	serviceManager, err := docker.NewDockerApplicationManager(ctx)
+	// serviceManager, err := docker.NewDockerApplicationManager(ctx)
+	// if err != nil {
+	// 	l.Fatalf("Failed to create docker service manager: %v", err)
+	// }
+
+	serviceManager, err := k8smanager.NewK8sOrchestratedServiceManager(
+		config.K8s.KubeConfigPath,
+		config.K8s.CPUResource,
+		config.K8s.MemoryResource)
 	if err != nil {
-		l.Fatalf("Failed to create docker service manager: %v", err)
+		l.Fatalf("Failed to create k8s service manager: %v", err)
 	}
 
 	imageBuilder := ipaas.NewIpaasImageBuilder(config.RMQ.URI, config.RMQ.RequestQueue)
@@ -65,6 +77,7 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 		serviceManager: serviceManager,
 		app:            config.App,
 		imageBuilder:   imageBuilder,
+		config:         config,
 		traefik:        config.Traefik,
 	}
 }
