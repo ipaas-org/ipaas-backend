@@ -62,18 +62,18 @@ func (r *ApplicationRepoerMongo) FindByNameAndOwner(ctx context.Context, name, o
 	return &entity, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByContainerID(ctx context.Context, containerID string) (*model.Application, error) {
-	var entity model.Application
-	if err := r.collection.FindOne(ctx, bson.M{
-		"container.ID": containerID,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, repo.ErrNotFound
-		}
-		return nil, err
-	}
-	return &entity, nil
-}
+// func (r *ApplicationRepoerMongo) FindByContainerID(ctx context.Context, containerID string) (*model.Application, error) {
+// 	var entity model.Application
+// 	if err := r.collection.FindOne(ctx, bson.M{
+// 		"container.ID": containerID,
+// 	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+// 		if err == mongo.ErrNoDocuments {
+// 			return nil, repo.ErrNotFound
+// 		}
+// 		return nil, err
+// 	}
+// 	return &entity, nil
+// }
 
 func (r *ApplicationRepoerMongo) FindByOwner(ctx context.Context, owner string) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
@@ -92,7 +92,7 @@ func (r *ApplicationRepoerMongo) FindByOwner(ctx context.Context, owner string) 
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerAndKind(ctx context.Context, owner string, kind model.ServiceKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerAndKind(ctx context.Context, owner string, kind model.ApplicationKind) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"owner": owner},
@@ -112,7 +112,7 @@ func (r *ApplicationRepoerMongo) FindByOwnerAndKind(ctx context.Context, owner s
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicTrue(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicTrue(ctx context.Context, owner string, serviceType model.ApplicationKind) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"owner": owner},
@@ -133,7 +133,7 @@ func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicTrue(ctx context.C
 	return entities, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicFalse(ctx context.Context, owner string, serviceType model.ServiceKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicFalse(ctx context.Context, owner string, serviceType model.ApplicationKind) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"owner": owner},
