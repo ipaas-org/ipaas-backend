@@ -5,7 +5,7 @@
     "name": "mysql 8.2.0",
     "imageName": "mysql:8.2.0-oracle",
     "imageID": "",
-    "listeningPort": "",
+    "listeningPort": "3306",
     "requiredEnvs": [
       {
         "key": "MYSQL_ROOT_PASSWORD",
@@ -37,7 +37,7 @@
     "name": "redis 7.2.3",
     "imageName": "bitnami/redis:7.2.3",
     "imageID": "",
-    "listeningPort": "",
+    "listeningPort": "6379",
     "requiredEnvs": [
       {
         "key": "REDIS_PASSWORD",
