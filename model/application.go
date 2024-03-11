@@ -13,7 +13,7 @@ type DbContainerConfig struct {
 }
 
 type (
-	ServiceKind      string
+	ApplicationKind  string
 	ApplicationState string
 
 	KeyValue struct {
@@ -26,7 +26,7 @@ type (
 		CreatedAt     time.Time          `bson:"createdAt" json:"createdAt"`
 		UpdatedAt     time.Time          `bson:"updatedAt" json:"updatedAt"`
 		Name          string             `bson:"name" json:"name"`
-		Kind          ServiceKind        `bson:"kind" json:"kind"`
+		Kind          ApplicationKind    `bson:"kind" json:"kind"`
 		DnsName       string             `bson:"dnsName" json:"dnsName"`
 		State         ApplicationState   `bson:"state" json:"state"`
 		Owner         string             `bson:"owner" json:"owner"`
@@ -37,7 +37,7 @@ type (
 		BuiltCommit   string             `bson:"builtCommit" json:"builtCommit,omitempty"`
 		IsPublic      bool               `bson:"isPublic" json:"isPublic"`
 		IsUpdatable   bool               `bson:"isUpdatable" json:"isUpdatable"`
-		Container     *Container         `bson:"container" json:"-"` //container,omitempty
+		Service       *Service           `bson:"service" json:"-"`
 		Envs          []KeyValue         `bson:"envs" json:"envs"`
 		BasedOn       string             `bson:"basedOn" json:"basedOn"` //id of the template the application is based on
 		// Image          *Image             `bson:"image" json:"image,omitempty"`
@@ -45,9 +45,9 @@ type (
 )
 
 const (
-	ApplicationKindWeb       ServiceKind = "web"
-	ApplicationKindStorage   ServiceKind = "storage"
-	ApplicationKindManagment ServiceKind = "managment"
+	ApplicationKindWeb       ApplicationKind = "web"
+	ApplicationKindStorage   ApplicationKind = "storage"
+	ApplicationKindManagment ApplicationKind = "managment"
 
 	ApplicationStatePending  ApplicationState = "pending"
 	ApplicationStateBuilding ApplicationState = "building"
@@ -58,7 +58,7 @@ const (
 	ApplicationStateCrashed  ApplicationState = "crashed"
 )
 
-func (s ServiceKind) String() string {
+func (s ApplicationKind) String() string {
 	return string(s)
 }
 
