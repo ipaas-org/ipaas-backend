@@ -18,7 +18,7 @@ type (
 		CreatedAt    time.Time          `bson:"createdAt" json:"createdAt"`
 		UpdatedAt    time.Time          `bson:"updatedAt" json:"updatedAt"`
 		Code         string             `bson:"code" json:"code"`
-		NetworkID    string             `bson:"networkId" json:"networkId"`
+		Namespace    string             `bson:"namespace" json:"namespace"`
 		Role         Role               `bson:"role" json:"role"` //defaults to "user"
 		UserSettings *UserSettings      `bson:"userSettings" json:"userSettings"`
 		Info         *UserInfo          `bson:"userInfo" json:"userInfo"`
