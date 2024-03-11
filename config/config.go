@@ -20,6 +20,7 @@ type (
 		HTTP        `yaml:"http"`
 		Database    `yaml:"database"`
 		Traefik     `yaml:"traefik"`
+		K8s         `yaml:"k8s"`
 	}
 
 	App struct {
@@ -68,6 +69,15 @@ type (
 		ApiBaseUrl string `env-required:"true" yaml:"apiBaseUrl" env:"TRAEFIK_API_BASE_URL"`
 		Username   string `env:"TRAEFIK_USERNAME"`
 		Password   string `env:"TRAEFIK_PASSWORD"`
+	}
+
+	K8s struct {
+		KubeConfigPath   string `env-required:"true" yaml:"kubeConfigPath" env:"K8S_KUBE_CONFIG_PATH"`
+		CPUResource      string `env-required:"true" yaml:"cpuResource" env:"K8S_CPU_RESOURCE"`
+		MemoryResource   string `env-required:"true" yaml:"memoryResource" env:"K8S_MEMORY_RESOURCE"`
+		RegistryUrl      string `env-required:"true" yaml:"registryUrl" env:"K8S_REGISTRY_URL"`
+		RegistryUsername string `env-required:"true" yaml:"registryUsername" env:"K8S_REGISTRY_USERNAME"`
+		RegistryPassword string `env-required:"true" yaml:"registryPassword" env:"K8S_REGISTRY_PASSWORD"`
 	}
 )
 

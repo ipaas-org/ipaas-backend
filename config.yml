@@ -2,9 +2,9 @@ app:
   name: "ipaas-mono"
   version: "0.1.0"
   deployment: "dev"
-  apiUrl: "http://api.ipaas.localhost"
-  frontendUrl: "http://ipaas.localhost"
-  baseDefaultDomain: "ipaasapp.localhost"
+  apiUrl: "http://localhost:8082"
+  frontendUrl: "http://localhost:5173/"
+  baseDefaultDomain: "cargoway.cloud"
 
 rabbitmq:
   requestQueue: request-test
@@ -29,4 +29,10 @@ gitProvider:
   callbackUri: "/api/v1/oauth/callback"
 
 traefik:
-  apiBaseUrl: "http://traefik.dev.localhost"
+  apiBaseUrl: "http://ingress.dev.localhost"
+
+k8s:
+  kubeConfigPath: "/home/vano/.kube/config"
+  cpuResource: "100m"
+  memoryResource: "128Mi"
+  registryUrl: "registry.cargoway.cloud"
