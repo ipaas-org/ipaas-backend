@@ -6,12 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type DbContainerConfig struct {
-	Name  string
-	Image string
-	Port  string
-}
-
 type (
 	ApplicationKind  string
 	ApplicationState string
@@ -35,7 +29,7 @@ type (
 		GithubRepo    string             `bson:"githubRepo" json:"githubRepo"`
 		GithubBranch  string             `bson:"githubBranch" json:"githubBranch"`
 		BuiltCommit   string             `bson:"builtCommit" json:"builtCommit,omitempty"`
-		IsPublic      bool               `bson:"isPublic" json:"isPublic"`
+		Visiblity     string             `bson:"visiblity" json:"visiblity"`
 		IsUpdatable   bool               `bson:"isUpdatable" json:"isUpdatable"`
 		Service       *Service           `bson:"service" json:"-"`
 		Envs          []KeyValue         `bson:"envs" json:"envs"`
@@ -56,6 +50,9 @@ const (
 	ApplicationStateFailed   ApplicationState = "failed"
 	ApplicationStateDeleting ApplicationState = "deleting"
 	ApplicationStateCrashed  ApplicationState = "crashed"
+
+	ApplicationVisiblityPublic  = "public"
+	ApplicationVisiblityPrivate = "private"
 )
 
 func (s ApplicationKind) String() string {
