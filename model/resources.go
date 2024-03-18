@@ -9,20 +9,26 @@ type (
 
 	Deployment struct {
 		BaseResource
-		Replicas      int32     `bson:"replicas" json:"replicas"`
-		ImageRegistry string    `bson:"imageRegistry" json:"imageRegistry"`
-		CpuLimits     string    `bson:"cpuLimits" json:"cpuLimits"`
-		MemoryLimits  string    `bson:"memoryLimits" json:"memoryLimits"`
-		Port          int32     `bson:"port" json:"port"`
-		Volumes       []*Volume `bson:"volumes" json:"volumes"`
-
-		// Envs          []KeyValue `bson:"envs" json:"envs"`
+		Replicas      int32      `bson:"replicas" json:"replicas"`
+		ImageRegistry string     `bson:"imageRegistry" json:"imageRegistry"`
+		CpuLimits     string     `bson:"cpuLimits" json:"cpuLimits"`
+		MemoryLimits  string     `bson:"memoryLimits" json:"memoryLimits"`
+		Port          int32      `bson:"port" json:"port"`
+		Volume        *Volume    `bson:"volumes" json:"volumes"`
+		ConfigMap     *ConfigMap `bson:"configMap" json:"configMap"`
 	}
 
 	Volume struct {
+		Name                  string
+		PersistantVolumeClaim *PersistentVolumeClaim `bson:"pvc" json:"pvc"`
+		MountPath             string                 `bson:"mountPath" json:"mountPath"`
+	}
+
+	PersistentVolumeClaim struct {
 		BaseResource
-		MountPath string `bson:"mountPath" json:"mountPath"`
-		Size      uint64 `bson:"size" json:"size"`
+		StorageClassName string `bson:"storageClassName" json:"storageClassName"`
+		AccessModes      string `bson:"accessModes" json:"accessModes"`
+		StorageSize      int64  `bson:"storageSize" json:"storageSize"`
 	}
 
 	ConfigMap struct {
@@ -61,4 +67,5 @@ const (
 	PortLabel         = "port"
 	IpaasVersionLabel = "ipaasVersion"
 	IpaasManagedLabel = "ipaasManaged"
+	ResourceNameLabel = "resourceName"
 )
