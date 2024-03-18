@@ -58,7 +58,7 @@ func main() {
 		l.Info("using mongo database")
 
 		l.Debug("connecting to database")
-		ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Minute)
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI(conf.Database.URI))
 		if err != nil {
 			l.Fatalf("main - mongo.Connect - error connecting to database: %s", err.Error())
