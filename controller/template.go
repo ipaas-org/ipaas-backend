@@ -25,7 +25,6 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 	app.State = model.ApplicationStateStarting
 	app.CreatedAt = time.Now()
 	app.Owner = userCode
-	app.IsPublic = false
 	app.IsUpdatable = false
 	app.ListeningPort = template.ListeningPort
 	app.Envs = envs
@@ -49,55 +48,26 @@ func (c *Controller) CreateNewApplicationBasedOnTemplate(ctx context.Context, us
 		}
 	}
 
-	c.l.Debugf("envs: %v", app.Envs)
-
 	user, err := c.UserRepo.FindByCode(ctx, userCode)
 	if err != nil {
 		c.l.Errorf("error finding user by code: %v", err)
 		return nil, err
 	}
 
-	labels := c.GenerateLabels(name, userCode, app.Kind)
-
 	switch template.Kind {
 	case model.ApplicationKindStorage:
-		if !c.IsNameAvailableUserWide(ctx, name, userCode) {
-			return nil, ErrApplicationNameNotAvailable
+		if err := c.createNewStorageKindService(ctx, template, app, user); err != nil {
+			c.l.Errorf("error creating storage service: %v", err)
+			return nil, err
 		}
-		app.DnsName = name
-	case model.ApplicationKindManagment:
-		if !c.IsNameAvailableSystemWide(ctx, name) {
-			return nil, ErrApplicationNameNotAvailable
-		}
-		//todo: could also be a random string but for now lets just use the name
-		host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
-		app.DnsName = host
 
-		labels = append(labels, c.GenerateTraefikDnsLables(name, host, app.ListeningPort)...)
+	case model.ApplicationKindManagment:
+		if err := c.createNewManagmentKindService(ctx, template, app, user); err != nil {
+			c.l.Errorf("error creating managment service: %v", err)
+			return nil, err
+		}
 	default:
 		return nil, ErrUnsupportedApplicationKind
-	}
-
-	if err := c.InsertApplication(ctx, app); err != nil {
-		c.l.Errorf("error inserting application: %v", err)
-		return nil, err
-	}
-	c.l.Debugf("template: %+v", template)
-	// container, err := c.createConnectAndStartContainer(ctx, name, template.ImageID, user.Namespace, app.Envs, labels)
-	if err != nil {
-		c.l.Errorf("error creating container: %v", err)
-		app.State = model.ApplicationStateFailed
-		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-			c.l.Errorf("error updating application: %v", err)
-		}
-		return nil, err
-	}
-
-	app.State = model.ApplicationStateRunning
-	app.Service = nil
-	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-		c.l.Errorf("error updating application: %v", err)
-		return nil, err
 	}
 
 	return app, nil
@@ -119,4 +89,168 @@ func (c *Controller) ListTemplates(ctx context.Context) ([]*model.Template, erro
 		return nil, err
 	}
 	return templates, nil
+}
+
+func (c *Controller) createNewStorageKindService(ctx context.Context, template *model.Template, app *model.Application, user *model.User) error {
+	if !c.IsNameAvailableUserWide(ctx, app.Name, user.Code) {
+		return ErrApplicationNameNotAvailable
+	}
+	app.DnsName = app.Name
+	app.Visiblity = model.ApplicationVisiblityPrivate
+
+	if err := c.InsertApplication(ctx, app); err != nil {
+		c.l.Errorf("error inserting application: %v", err)
+		return err
+	}
+
+	configMap, err := c.createConfigMap(ctx, app, user, app.Envs)
+	if err != nil {
+		return err
+	}
+
+	GiSize := int64(1 * 1024 * 1024 * 1024) // 1Gi
+	storageClass := "longhorn-test"
+	pvc, err := c.CreatePersistantVolumeClaim(ctx, app, user, storageClass, GiSize)
+	if err != nil {
+		return err
+	}
+	volume := new(model.Volume)
+	volume.Name = fmt.Sprintf("vol-%s", app.Name)
+	volume.MountPath = template.PersistancePath
+	volume.PersistantVolumeClaim = pvc
+
+	deployment, err := c.createDeployment(ctx, app, user, template.ImageName, configMap.Name, volume)
+	if err != nil {
+		return err
+	}
+	deployment.ConfigMap = configMap
+
+	//watch for deployment ready state, it's non blocking so we just check at the end
+	done, errChan := c.serviceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
+	var errWhileWaiting error
+loop:
+	for {
+		select {
+		case err := <-errChan:
+			c.l.Errorf("error while waiting for deployment: %v", err)
+			errWhileWaiting = err
+			break loop
+		case _, ok := <-done:
+			if !ok {
+				//todo: choose what to do in this case
+				c.l.Errorf("done chan is closed, either context was cancelled or something worst O-O")
+				if ctx.Err() != nil {
+					c.l.Errorf("context cancelled while a deployment was being created, no further changes will be done at the moment")
+				} else {
+					errWhileWaiting = fmt.Errorf("internal error")
+				}
+			} else {
+				c.l.Debugf("deployment %s is available", deployment.Name)
+			}
+			break loop
+		}
+	}
+
+	service, err := c.createService(ctx, app, user)
+	if err != nil {
+		return err
+	}
+	service.Deployment = deployment
+
+	if errWhileWaiting != nil {
+		//todo: handle waiting error, it's probably because it reached a timeout
+		//in this case it probably means that we reached a cpu/mem cap and we should
+		//expand the infra, it should really not happen
+		c.l.Errorf("internal error reached, this should not happen, check infrastructure resources left")
+		app.State = model.ApplicationStateFailed
+	} else {
+		app.State = model.ApplicationStateRunning
+		app.Service = service
+	}
+	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+		c.l.Errorf("error updating application: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (c *Controller) createNewManagmentKindService(ctx context.Context, template *model.Template, app *model.Application, user *model.User) error {
+	if !c.IsNameAvailableSystemWide(ctx, app.Name) {
+		return ErrApplicationNameNotAvailable
+	}
+	//todo: could also be a random string but for now lets just use the name
+	host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
+	app.DnsName = host
+	app.Visiblity = model.ApplicationVisiblityPublic
+
+	if err := c.InsertApplication(ctx, app); err != nil {
+		c.l.Errorf("error inserting application: %v", err)
+		return err
+	}
+
+	configMap, err := c.createConfigMap(ctx, app, user, app.Envs)
+	if err != nil {
+		return err
+	}
+
+	deployment, err := c.createDeployment(ctx, app, user, template.ImageName, configMap.Name, nil)
+	if err != nil {
+		return err
+	}
+	deployment.ConfigMap = configMap
+
+	//watch for deployment ready state, it's non blocking so we just check at the end
+	done, errChan := c.serviceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
+	var errWhileWaiting error
+loop:
+	for {
+		select {
+		case err := <-errChan:
+			c.l.Errorf("error while waiting for deployment: %v", err)
+			errWhileWaiting = err
+			break loop
+		case _, ok := <-done:
+			if !ok {
+				//todo: choose what to do in this case
+				c.l.Errorf("done chan is closed, either context was cancelled or something worst O-O")
+				if ctx.Err() != nil {
+					c.l.Errorf("context cancelled while a deployment was being created, no further changes will be done at the moment")
+				} else {
+					errWhileWaiting = fmt.Errorf("internal error")
+				}
+			} else {
+				c.l.Debugf("deployment %s is available", deployment.Name)
+			}
+			break loop
+		}
+	}
+
+	service, err := c.createService(ctx, app, user)
+	if err != nil {
+		return err
+	}
+	service.Deployment = deployment
+
+	ingressRoute, err := c.createIngressRoute(ctx, app, user, app.DnsName, service.Name, service.Port)
+	if err != nil {
+		return err
+	}
+	service.IngressRoute = ingressRoute
+
+	if errWhileWaiting != nil {
+		//todo: handle waiting error, it's probably because it reached a timeout
+		//in this case it probably means that we reached a cpu/mem cap and we should
+		//expand the infra, it should really not happen
+		c.l.Errorf("internal error reached, this should not happen, check infrastructure resources left")
+		app.State = model.ApplicationStateFailed
+	} else {
+		app.State = model.ApplicationStateRunning
+		app.Service = service
+	}
+	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+		c.l.Errorf("error updating application: %v", err)
+		return err
+	}
+	return nil
 }

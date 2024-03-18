@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
@@ -51,7 +50,7 @@ func (c *Controller) InsertApplication(ctx context.Context, app *model.Applicati
 	return nil
 }
 
-func (c *Controller) UpdateApplication(ctx context.Context, app *model.Application) error {
+func (c *Controller) updateApplication(ctx context.Context, app *model.Application) error {
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application: %v", err)
 		return err
@@ -67,7 +66,9 @@ func (c *Controller) CreateNewWebApplication(ctx context.Context, userCode, prov
 	app.State = model.ApplicationStatePending
 	app.CreatedAt = time.Now()
 	app.Owner = userCode
-	app.IsPublic = true //! for now all applications are public
+	//todo: allow user to set visibility
+	//! for now all applications are public
+	app.Visiblity = model.ApplicationVisiblityPublic
 	app.IsUpdatable = false
 	app.ListeningPort = listeningPort
 	app.GithubBranch = gitBranch
@@ -111,7 +112,7 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 		return err
 	}
 
-	c.l.Infof("create the container for %s[%s]", app.Name, app.ID.Hex())
+	c.l.Infof("create application deployment for %s[%s]", app.Name, app.ID.Hex())
 	//update status of application to starting and set the built commit to builtCommit
 	app.State = model.ApplicationStateStarting
 	app.BuiltCommit = BuildCommit
@@ -119,66 +120,71 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 		c.l.Errorf("error updating application: %v", err)
 		return err
 	}
-	//start a container from the application
-	// labels := c.GenerateLabels(app.Name, app.Owner, app.Kind)
-	host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
-	// traefikLabels := c.GenerateTraefikDnsLables(app.Name, host, app.ListeningPort)
-	// labels = append(labels, traefikLabels...)
 
-	p, err := strconv.Atoi(app.ListeningPort)
+	configMap, err := c.createConfigMap(ctx, app, user, app.Envs)
 	if err != nil {
-		c.l.Errorf("error converting port to int: %v", err)
-		return err
-	}
-	intPort := int32(p)
-	// container, err := c.createConnectAndStartContainer(ctx, app.Name, imageID, user.Namespace, app.Envs, labels)
-	deployment, err := c.serviceManager.CreateDeployment(ctx, user.Namespace, "deploy-"+app.Name, app.Name, user.Code, staticTempEnvironment, "public", registryImage, 1, intPort, app.Envs)
-	if err != nil {
-		c.l.Errorf("error creating deployment: %v", err)
-		app.State = model.ApplicationStateFailed
-		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-			c.l.Errorf("error updating application: %v", err)
-		}
 		return err
 	}
 
-	service, err := c.serviceManager.CreateService(ctx, user.Namespace, "svc-"+app.Name, app.Name, user.Code, staticTempEnvironment, "public", intPort)
+	//todo: implement volumes
+	deployment, err := c.createDeployment(ctx, app, user, registryImage, configMap.Name, nil)
 	if err != nil {
-		c.l.Errorf("error creating service: %v", err)
-		app.State = model.ApplicationStateFailed
-		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-			c.l.Errorf("error updating application: %v", err)
+		return err
+	}
+	deployment.ConfigMap = configMap
+
+	//watch for deployment ready state, it's non blocking so we just check at the end
+	done, errChan := c.serviceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
+	var errWhileWaiting error
+loop:
+	for {
+		select {
+		case err := <-errChan:
+			c.l.Errorf("error while waiting for deployment: %v", err)
+			errWhileWaiting = err
+			break loop
+		case _, ok := <-done:
+			if !ok {
+				//todo: choose what to do in this case
+				c.l.Errorf("done chan is closed, either context was cancelled or something worst O-O")
+				if ctx.Err() != nil {
+					c.l.Errorf("context cancelled while a deployment was being created, no further changes will be done at the moment")
+				} else {
+					errWhileWaiting = fmt.Errorf("internal error")
+				}
+			} else {
+				c.l.Debugf("deployment %s is available", deployment.Name)
+			}
+			break loop
 		}
+	}
+
+	service, err := c.createService(ctx, app, user)
+	if err != nil {
 		return err
 	}
 	service.Deployment = deployment
 
-	ingressRoute, err := c.serviceManager.CreateIngressRoute(ctx, user.Namespace, "ingressroute-"+app.Name, app.Name, user.Code, staticTempEnvironment, "public", host, "svc-"+app.Name)
+	host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
+	ingressRoute, err := c.createIngressRoute(ctx, app, user, host, service.Name, service.Port)
 	if err != nil {
-		c.l.Errorf("error creating ingress route: %v", err)
-		app.State = model.ApplicationStateFailed
-		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-			c.l.Errorf("error updating application: %v", err)
-		}
 		return err
 	}
 	service.IngressRoute = ingressRoute
 
-	//todo: this works but idk if it's timing based or there is a better way of doing it
-	//todo: so for now we will just tell the user to wait a few seconds for our dns to update
-	// updated, err := c.checkIfTraefikUpdated(ctx, app.Name, 15)
-	// if err != nil {
-	// 	return err
-	// }
-	// if !updated {
-	// 	//! this should not happen, if it does check if traefik is healty
-	// 	return fmt.Errorf("dns not updated successfully")
-	// }
+	if errWhileWaiting != nil {
+		//todo: handle waiting error, it's probably because it reached a timeout
+		//in this case it probably means that we reached a cpu/mem cap and we should
+		//expand the infra, it should really not happen
+		c.l.Errorf("internal error reached, this should not happen, check infrastructure resources left")
+		app.State = model.ApplicationStateFailed
+	} else {
+		app.State = model.ApplicationStateRunning
+		app.Service = service
+		app.DnsName = host
+	}
 
 	//update the application with the container informations and status running
-	app.State = model.ApplicationStateRunning
-	app.Service = service
-	app.DnsName = host
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application: %v", err)
 		return err
@@ -201,28 +207,6 @@ func (c *Controller) DeleteApplication(ctx context.Context, application *model.A
 		return err
 	}
 
-	//delete the container
-	// if application.Implementation != nil {
-	// 	if err := c.serviceManager.StopServiceByID(ctx, application.Implementation.ID); err != nil {
-	// 		c.l.Errorf("error stopping container[%s] of user %s for application %s: %v", application.Implementation.ID, application.Owner, application.ID.Hex(), err)
-	// 		return err
-	// 	}
-
-	// 	if err := c.serviceManager.RemoveServiceByID(ctx, application.Implementation.ID, false); err != nil {
-	// 		c.l.Errorf("error removing container[%s] of user %s for application %s: %v", application.Implementation.ID, application.Owner, application.ID.Hex(), err)
-	// 		return err
-	// 	}
-
-	// 	if application.Kind == model.ApplicationKindWeb {
-	// 		//delete the image
-	// 		if err := c.serviceManager.RemoveImageByID(ctx, application.Implementation.ImageID); err != nil {
-	// 			c.l.Errorf("error removing image[%s] of user %s for applicationg %s: %v", application.Implementation.ImageID, application.Owner, application.ID.Hex(), err)
-	// 			return err
-	// 		}
-	// 	}
-	// }
-
-	//delete the application from the db
 	if _, err := c.ApplicationRepo.DeleteByID(ctx, application.ID); err != nil {
 		c.l.Errorf("error deleting application %s: %v", application.ID.Hex(), err)
 		return err

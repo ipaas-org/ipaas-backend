@@ -28,7 +28,7 @@ func (c *Controller) BuildImage(ctx context.Context, app *model.Application, pro
 	if err := c.imageBuilder.BuildImage(request); err != nil {
 		c.l.Errorf("error sending image to image builder: %v", err)
 		app.State = model.ApplicationStateFailed
-		if err := c.UpdateApplication(ctx, app); err != nil {
+		if err := c.updateApplication(ctx, app); err != nil {
 			return err
 		}
 		return err
