@@ -21,16 +21,16 @@ type TokenRepoerMongo struct {
 }
 
 func (r *TokenRepoerMongo) FindByToken(ctx context.Context, token string) (*model.RefreshToken, error) {
-	var entity model.RefreshToken
+	var refreshToken model.RefreshToken
 	if err := r.collection.FindOne(ctx, bson.M{
 		"token": token,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&refreshToken); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &refreshToken, nil
 }
 
 func (r *TokenRepoerMongo) InsertOne(ctx context.Context, token *model.RefreshToken) (interface{}, error) {

@@ -21,40 +21,40 @@ type TemplateRepoerMongo struct {
 }
 
 func (r *TemplateRepoerMongo) FindByCode(ctx context.Context, code string) (*model.Template, error) {
-	var entity model.Template
+	var template model.Template
 	if err := r.collection.FindOne(ctx, bson.M{
 		"code": code,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&template); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &template, nil
 }
 
 func (r *TemplateRepoerMongo) FindAll(ctx context.Context) ([]*model.Template, error) {
-	var entities []*model.Template
+	var templates []*model.Template
 	cursor, err := r.collection.Find(ctx, bson.M{}, options.Find().SetSort(bson.M{}))
 	if err != nil {
 		return nil, err
 	}
-	if err := cursor.All(ctx, &entities); err != nil {
+	if err := cursor.All(ctx, &templates); err != nil {
 		return nil, err
 	}
-	return entities, nil
+	return templates, nil
 }
 
 func (r *TemplateRepoerMongo) FindAllAvailable(ctx context.Context) ([]*model.Template, error) {
-	var entities []*model.Template
+	var templates []*model.Template
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"available": true,
 	}, options.Find().SetSort(bson.M{}))
 	if err != nil {
 		return nil, err
 	}
-	if err := cursor.All(ctx, &entities); err != nil {
+	if err := cursor.All(ctx, &templates); err != nil {
 		return nil, err
 	}
-	return entities, nil
+	return templates, nil
 }

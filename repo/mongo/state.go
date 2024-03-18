@@ -22,16 +22,16 @@ type StateRepoerMongo struct {
 }
 
 func (r *StateRepoerMongo) FindByState(ctx context.Context, state string) (*model.State, error) {
-	var entity model.State
+	var stateModel model.State
 	if err := r.collection.FindOne(ctx, bson.M{
 		"state": state,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&stateModel); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &stateModel, nil
 }
 
 func (r *StateRepoerMongo) InsertOne(ctx context.Context, state *model.State) (interface{}, error) {

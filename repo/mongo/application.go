@@ -23,43 +23,43 @@ type ApplicationRepoerMongo struct {
 }
 
 func (r *ApplicationRepoerMongo) FindByID(ctx context.Context, _id primitive.ObjectID) (*model.Application, error) {
-	var entity model.Application
+	var application model.Application
 	if err := r.collection.FindOne(ctx, bson.M{
 		"_id": _id,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&application); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &application, nil
 }
 
 func (r *ApplicationRepoerMongo) FindByName(ctx context.Context, name string) (*model.Application, error) {
-	var entity model.Application
+	var application model.Application
 	if err := r.collection.FindOne(ctx, bson.M{
 		"name": name,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&application); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &application, nil
 }
 
 func (r *ApplicationRepoerMongo) FindByNameAndOwner(ctx context.Context, name, owner string) (*model.Application, error) {
-	var entity model.Application
+	var application model.Application
 	if err := r.collection.FindOne(ctx, bson.M{
 		"name":  name,
 		"owner": owner,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&application); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &application, nil
 }
 
 // func (r *ApplicationRepoerMongo) FindByContainerID(ctx context.Context, containerID string) (*model.Application, error) {
@@ -82,76 +82,76 @@ func (r *ApplicationRepoerMongo) FindByOwner(ctx context.Context, owner string) 
 	if err != nil {
 		return nil, err
 	}
-	var entities []*model.Application
-	if err := cursor.All(ctx, &entities); err != nil {
+	var applications []*model.Application
+	if err := cursor.All(ctx, &applications); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return entities, nil
+	return applications, nil
 }
 
 func (r *ApplicationRepoerMongo) FindByOwnerAndKind(ctx context.Context, owner string, kind model.ApplicationKind) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"owner": owner},
-			{"type": kind},
+			{"kind": kind},
 		},
 	}, options.Find().SetSort(bson.M{}))
 	if err != nil {
 		return nil, err
 	}
-	var entities []*model.Application
-	if err := cursor.All(ctx, &entities); err != nil {
+	var applications []*model.Application
+	if err := cursor.All(ctx, &applications); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return entities, nil
+	return applications, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicTrue(ctx context.Context, owner string, serviceType model.ApplicationKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicTrue(ctx context.Context, owner string, kind model.ApplicationKind) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"owner": owner},
-			{"type": serviceType},
-			{"isPublic": true},
+			{"kind": kind},
+			{"visibility": model.ApplicationVisiblityPublic},
 		},
 	}, options.Find().SetSort(bson.M{}))
 	if err != nil {
 		return nil, err
 	}
-	var entities []*model.Application
-	if err := cursor.All(ctx, &entities); err != nil {
+	var applications []*model.Application
+	if err := cursor.All(ctx, &applications); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return entities, nil
+	return applications, nil
 }
 
-func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicFalse(ctx context.Context, owner string, serviceType model.ApplicationKind) ([]*model.Application, error) {
+func (r *ApplicationRepoerMongo) FindByOwnerAndKindAndIsPublicFalse(ctx context.Context, owner string, kind model.ApplicationKind) ([]*model.Application, error) {
 	cursor, err := r.collection.Find(ctx, bson.M{
 		"$and": []bson.M{
 			{"owner": owner},
-			{"type": serviceType},
-			{"isPublic": false},
+			{"kind": kind},
+			{"visibility": model.ApplicationVisiblityPrivate},
 		},
 	}, options.Find().SetSort(bson.M{}))
 	if err != nil {
 		return nil, err
 	}
-	var entities []*model.Application
-	if err := cursor.All(ctx, &entities); err != nil {
+	var applications []*model.Application
+	if err := cursor.All(ctx, &applications); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return entities, nil
+	return applications, nil
 }
 
 func (r *ApplicationRepoerMongo) FindByOwnerAndIsUpdatableTrue(ctx context.Context, owner string) ([]*model.Application, error) {
@@ -164,14 +164,14 @@ func (r *ApplicationRepoerMongo) FindByOwnerAndIsUpdatableTrue(ctx context.Conte
 	if err != nil {
 		return nil, err
 	}
-	var entities []*model.Application
-	if err := cursor.All(ctx, &entities); err != nil {
+	var applications []*model.Application
+	if err := cursor.All(ctx, &applications); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return entities, nil
+	return applications, nil
 }
 
 func (r *ApplicationRepoerMongo) InsertOne(ctx context.Context, application *model.Application) (interface{}, error) {

@@ -35,55 +35,55 @@ func (r *UserRepoerMongo) InsertOne(ctx context.Context, user *model.User) (inte
 }
 
 func (r *UserRepoerMongo) FindByID(ctx context.Context, id primitive.ObjectID) (*model.User, error) {
-	var entity model.User
+	var user model.User
 	if err := r.collection.FindOne(ctx, bson.M{
 		"_id": id,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&user); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &user, nil
 }
 
 func (r *UserRepoerMongo) FindByEmail(ctx context.Context, email string) (*model.User, error) {
-	var entity model.User
+	var user model.User
 	if err := r.collection.FindOne(ctx, bson.M{
 		"userInfo.email": email,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&user); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &user, nil
 }
 
 func (r *UserRepoerMongo) FindByUsername(ctx context.Context, username string) (*model.User, error) {
-	var entity model.User
+	var user model.User
 	if err := r.collection.FindOne(ctx, bson.M{
 		"userInfo.username": username,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&user); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &user, nil
 }
 
 func (r *UserRepoerMongo) FindByCode(ctx context.Context, userCode string) (*model.User, error) {
-	var entity model.User
+	var user model.User
 	if err := r.collection.FindOne(ctx, bson.M{
 		"code": userCode,
-	}, options.FindOne().SetSort(bson.M{})).Decode(&entity); err != nil {
+	}, options.FindOne().SetSort(bson.M{})).Decode(&user); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, repo.ErrNotFound
 		}
 		return nil, err
 	}
-	return &entity, nil
+	return &user, nil
 }
 
 func (r *UserRepoerMongo) UpdateGithubAccessTokenByID(ctx context.Context, githubAccessToken string, id primitive.ObjectID) (bool, error) {
