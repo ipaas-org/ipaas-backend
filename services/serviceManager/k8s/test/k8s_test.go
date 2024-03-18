@@ -53,6 +53,7 @@ func TestCreateNewNamespace(t *testing.T) {
 func TestCreateConfigMap(t *testing.T) {
 	manager := getTestK8sManager()
 	namespace := "test-namespace"
+	configMapName := "test-configmap"
 	ctx := context.Background()
 	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
@@ -71,30 +72,35 @@ some very very big content
 which is on multiple lines`,
 		},
 	}
-	configMap, err := manager.CreateConfigMap(ctx, namespace, "test-configmap", data, defaultLabels)
+	labels := append(defaultLabels, model.KeyValue{
+		Key:   model.ResourceNameLabel,
+		Value: configMapName,
+	})
+	configMap, err := manager.CreateNewConfigMap(ctx, namespace, configMapName, data, labels)
 	if err != nil {
 		t.Errorf("error creating configmap: %v\n", err)
 	}
 	t.Log("configmap created: ", configMap)
-
-	// t.Cleanup(func() {
-	// 	err := manager.DeleteNamespace(ctx, namespace, 0)
-	// 	if err != nil {
-	// 		t.Errorf("error deleting namespace: %v\n", err)
-	// 	}
-	// })
-
+	<-time.After(10 * time.Second)
+	t.Cleanup(func() {
+		err := manager.DeleteNamespace(ctx, namespace, 0)
+		if err != nil {
+			t.Errorf("error deleting namespace: %v\n", err)
+		}
+	})
 }
 
 func TestCreateNewDeployment(t *testing.T) {
 	manager := getTestK8sManager()
 	namespace := "test-namespace"
 	// realImage := "registry.cargoway.cloud/us-60ff775c-4915-4523-bf91-ccb63874d95d/65e8ab54c3086ba65b91cb16:22e7f5b80c0e537a72d09dae4de7ab245c5ac8f9"
-	ctx := context.Background()
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
-		t.Errorf("error creating namespace: %v\n", err)
+		t.Fatalf("error creating namespace: %v\n", err)
 	}
+
+	done, errChan := manager.WaitDeploymentReadyState(ctx, namespace, "test-deployment")
 
 	data := []model.KeyValue{
 		{
@@ -108,19 +114,40 @@ some very very big content
 which is on multiple lines`,
 		},
 	}
-	configMap, err := manager.CreateConfigMap(ctx, namespace, "test-configmap", data, defaultLabels)
+	configMap, err := manager.CreateNewConfigMap(ctx, namespace, "test-configmap", data, defaultLabels)
 	if err != nil {
-		t.Errorf("error creating configmap: %v\n", err)
+		t.Fatalf("error creating configmap: %v\n", err)
 	}
 	t.Log("configmap created: ", configMap)
 
-	dep, err := manager.CreateDeployment(ctx, namespace, "test-deployment", "nginx-test", "ubuntu/nginx", 1, 80, defaultLabels, configMap)
+	labels := append(defaultLabels, model.KeyValue{
+		Key:   model.ResourceNameLabel,
+		Value: "test-deployment",
+	})
+	dep, err := manager.CreateNewDeployment(ctx, namespace, "test-deployment", "nginx-test", "ubuntu/nginx", 1, 80, labels, configMap.Name, nil)
 	if err != nil {
-		t.Errorf("error creating deployment: %v\n", err)
+		t.Fatalf("error creating deployment: %v\n", err)
 	}
 	t.Logf("deployment created: %+v", dep)
 
+loop:
+	for {
+		select {
+		case err := <-errChan:
+			t.Log("found error while waiting for deployment", err)
+			break loop
+		case _, ok := <-done:
+			if !ok {
+				t.Log("done chan is closed, either context was cancelled or something worst O-O")
+			} else {
+				t.Log("found the done bitch")
+			}
+			break loop
+		}
+	}
+
 	t.Cleanup(func() {
+		t.Log("removing namespace", namespace)
 		err := manager.DeleteNamespace(ctx, namespace, 0)
 		if err != nil {
 			t.Errorf("error deleting namespace: %v\n", err)
@@ -143,13 +170,13 @@ func TestRestartDeployment(t *testing.T) {
 			Value: "test-value",
 		},
 	}
-	configMap, err := manager.CreateConfigMap(ctx, namespace, "test-configmap", data, defaultLabels)
+	configMap, err := manager.CreateNewConfigMap(ctx, namespace, "test-configmap", data, defaultLabels)
 	if err != nil {
 		t.Errorf("error creating configmap: %v\n", err)
 	}
 	t.Log("configmap created: ", configMap)
 
-	dep, err := manager.CreateDeployment(ctx, namespace, "test-deployment", "nginx-test", "ubuntu/nginx", 1, 80, defaultLabels, configMap)
+	dep, err := manager.CreateNewDeployment(ctx, namespace, "test-deployment", "nginx-test", "ubuntu/nginx", 1, 80, defaultLabels, configMap.Name, nil)
 	if err != nil {
 		t.Errorf("error creating deployment: %v\n", err)
 	}
@@ -165,7 +192,7 @@ func TestRestartDeployment(t *testing.T) {
 	// t.Cleanup(func() {
 }
 
-func TestDeleteNamesapce(t *testing.T) {
+func TestDeleteNamespace(t *testing.T) {
 	manager := getTestK8sManager()
 	namespace := "test-namespace"
 	ctx := context.Background()
@@ -173,9 +200,35 @@ func TestDeleteNamesapce(t *testing.T) {
 	// if err != nil {
 	// 	t.Errorf("error creating namespace: %v\n", err)
 	// }
+	namespaceLabels := append(defaultLabels, model.KeyValue{
+		Key:   model.ResourceNameLabel,
+		Value: namespace,
+	})
+
+	done, errChan := manager.WaitForNamespaceRemoval(ctx, namespace)
 
 	if err := manager.DeleteNamespace(ctx, namespace, 0); err != nil {
 		t.Errorf("error deleting namespace: %v\n", err)
+	}
+
+loop:
+	for {
+		select {
+		case err := <-errChan:
+			t.Log("found error while waiting for namespace removal:", err)
+			break loop
+		case _, ok := <-done:
+			if !ok {
+				t.Log("done chan is closed, either context was cancelled or something worst O-O")
+			} else {
+				t.Log("found stuff")
+				err := manager.CreateNewNamespace(ctx, namespace, namespaceLabels)
+				if err != nil {
+					t.Error("incorrect behaviour of delete namespace:", err)
+				}
+			}
+			break loop
+		}
 	}
 }
 
@@ -184,7 +237,12 @@ func TestFullApplicationStartup(t *testing.T) {
 	namespace := "test-namespace"
 	image := "registry.cargoway.cloud/library/heavy:latest"
 	ctx := context.Background()
-	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
+
+	namespaceLabels := append(defaultLabels, model.KeyValue{
+		Key:   model.ResourceNameLabel,
+		Value: namespace,
+	})
+	err := manager.CreateNewNamespace(ctx, namespace, namespaceLabels)
 	if err != nil {
 		t.Errorf("error creating namespace: %v\n", err)
 	}
@@ -195,25 +253,26 @@ func TestFullApplicationStartup(t *testing.T) {
 			Value: "test-value",
 		},
 	}
-	configMap, err := manager.CreateConfigMap(ctx, namespace, "test-configmap", data, defaultLabels)
+
+	configMap, err := manager.CreateNewConfigMap(ctx, namespace, "test-configmap", data, defaultLabels)
 	if err != nil {
 		t.Errorf("error creating configmap: %v\n", err)
 	}
 	t.Log("configmap created: ", configMap)
 
-	dep, err := manager.CreateDeployment(ctx, namespace, "test-deployment", "nginx-test", image, 1, 8080, defaultLabels, configMap)
+	dep, err := manager.CreateNewDeployment(ctx, namespace, "test-deployment", "nginx-test", image, 1, 8080, defaultLabels, configMap.Name, nil)
 	if err != nil {
 		t.Errorf("error creating deployment: %v\n", err)
 	}
 	t.Logf("deployment created: %+v", dep)
 
-	service, err := manager.CreateService(ctx, namespace, "test-service", "nginx-test", 8080, defaultLabels)
+	service, err := manager.CreateNewService(ctx, namespace, "test-service", "nginx-test", 8080, defaultLabels)
 	if err != nil {
 		t.Errorf("error creating service: %v\n", err)
 	}
 	t.Logf("service created: %+v", service)
 
-	ingress, err := manager.CreateIngressRoute(ctx, namespace, "test-ingress", "testing.cargoway.cloud", "test-service", defaultLabels)
+	ingress, err := manager.CreateNewIngressRoute(ctx, namespace, "test-ingress", "testing.cargoway.cloud", "test-service", 8080, defaultLabels)
 	if err != nil {
 		t.Errorf("error creating ingress: %v\n", err)
 	}
@@ -225,4 +284,57 @@ func TestFullApplicationStartup(t *testing.T) {
 	// 		t.Errorf("error deleting namespace: %v\n", err)
 	// 	}
 	// })
+}
+
+func TestNewServiceCreation(t *testing.T) {
+	manager := getTestK8sManager()
+	namespace := "test-namespace"
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
+	if err != nil {
+		t.Fatalf("error creating namespace: %v\n", err)
+	}
+
+	data := []model.KeyValue{
+		{
+			Key:   "test-key",
+			Value: "test-value",
+		},
+		{
+			Key: "test-file",
+			Value: `this is 
+some very very big content
+which is on multiple lines`,
+		},
+	}
+	configMap, err := manager.CreateNewConfigMap(ctx, namespace, "test-configmap", data, defaultLabels)
+	if err != nil {
+		t.Fatalf("error creating configmap: %v\n", err)
+	}
+	t.Log("configmap created: ", configMap)
+
+	labels := append(defaultLabels, model.KeyValue{
+		Key:   model.ResourceNameLabel,
+		Value: "test-service",
+	})
+	dep, err := manager.CreateNewDeployment(ctx, namespace, "test-deployment", "nginx-test", "ubuntu/nginx", 1, 80, defaultLabels, configMap.Name, nil)
+	if err != nil {
+		t.Fatalf("error creating deployment: %v\n", err)
+	}
+	t.Logf("deployment created: %+v", dep)
+
+	svc, err := manager.CreateNewService(ctx, namespace, "test-service", "nginx-test", 80, labels)
+	if err != nil {
+		t.Fatalf("error creating service: %v\n", err)
+	}
+	t.Logf("service created: %+v", svc)
+
+	t.Cleanup(func() {
+		ctx := context.Background()
+		t.Log("removing namespace", namespace)
+		err := manager.DeleteNamespace(ctx, namespace, 0)
+		if err != nil {
+			t.Errorf("error deleting namespace: %v\n", err)
+		}
+	})
 }

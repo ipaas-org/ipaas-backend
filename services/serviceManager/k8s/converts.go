@@ -30,3 +30,14 @@ func convertModelDataToK8sData(data []model.KeyValue) map[string]string {
 	}
 	return k8sData
 }
+
+func convertK8sDataToModelData(data map[string]string) []model.KeyValue {
+	var modelData []model.KeyValue
+	for k, v := range data {
+		modelData = append(modelData, model.KeyValue{
+			Key:   k,
+			Value: v,
+		})
+	}
+	return modelData
+}
