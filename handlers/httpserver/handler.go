@@ -61,12 +61,4 @@ func (h *httpHandler) RegisterRoutes() {
 	templates := api.Group("/templates")
 	templates.GET("/list", h.ListTemplates)
 	templates.GET("/:code", h.GetTemplate)
-	// //deployment routes
-	// deployment := authGroup.Group("/deployment")
-
-	// webDeployment := deployment.Group("/web")
-	// webDeployment.POST("/new", h.NewWebDepolyment)
-
-	// dbDeployment := deployment.Group("/db")
-	// dbDeployment.POST("/new", h.NewDbDeployment)
 }
