@@ -33,6 +33,6 @@ traefik:
 
 k8s:
   kubeConfigPath: "/home/vano/.kube/config"
-  cpuResource: "100m"
-  memoryResource: "128Mi"
+  cpuResource: "200m"
+  memoryResource: "512Mi"
   registryUrl: "registry.cargoway.cloud"
