@@ -126,7 +126,7 @@ func (c *Controller) createNewStorageKindService(ctx context.Context, template *
 	deployment.ConfigMap = configMap
 
 	//watch for deployment ready state, it's non blocking so we just check at the end
-	done, errChan := c.serviceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
+	done, errChan := c.ServiceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
 	var errWhileWaiting error
 loop:
 	for {
@@ -201,7 +201,7 @@ func (c *Controller) createNewManagmentKindService(ctx context.Context, template
 	deployment.ConfigMap = configMap
 
 	//watch for deployment ready state, it's non blocking so we just check at the end
-	done, errChan := c.serviceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
+	done, errChan := c.ServiceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
 	var errWhileWaiting error
 loop:
 	for {

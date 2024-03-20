@@ -10,6 +10,8 @@ import (
 	"github.com/ipaas-org/ipaas-backend/services/gitProvider/github"
 	"github.com/ipaas-org/ipaas-backend/services/imageBuilder"
 	"github.com/ipaas-org/ipaas-backend/services/imageBuilder/ipaas"
+	logprovider "github.com/ipaas-org/ipaas-backend/services/logProvider"
+	"github.com/ipaas-org/ipaas-backend/services/logProvider/grafana"
 	k8smanager "github.com/ipaas-org/ipaas-backend/services/serviceManager/k8s"
 	"github.com/sirupsen/logrus"
 )
@@ -30,11 +32,12 @@ type Controller struct {
 
 	gitProvider    gitProvider.Provider
 	jwtHandler     *jwt.JWThandler
-	serviceManager *k8smanager.K8sOrchestratedServiceManager
+	ServiceManager *k8smanager.K8sOrchestratedServiceManager
 	app            config.App
 	traefik        config.Traefik
 	config         *config.Config
 	imageBuilder   imageBuilder.ImageBuilder
+	logProvider    logprovider.LogProvider
 }
 
 func NewController(ctx context.Context, config *config.Config, l *logrus.Logger) *Controller {
@@ -47,11 +50,6 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 	default:
 		l.Fatalf("Unknown oauth provider: %s", config.GitProvider.Provider)
 	}
-
-	// serviceManager, err := docker.NewDockerApplicationManager(ctx)
-	// if err != nil {
-	// 	l.Fatalf("Failed to create docker service manager: %v", err)
-	// }
 
 	serviceManager, err := k8smanager.NewK8sOrchestratedServiceManager(
 		config.K8s.KubeConfigPath,
@@ -69,15 +67,28 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 	l.Info("jwt expiration is:", config.JWT.Duration)
 	jwtHandler := jwt.NewJWThandler(config.JWT.Secret, config.App.Name+":"+config.App.Version, config.JWT.Duration)
 
+	var logProvider logprovider.LogProvider
+	switch config.LogProvider.Provider {
+	case logprovider.LogProviderGrafanaLoki:
+		l.Infof("Using Grafana Loki as log provider")
+		logProvider, err = grafana.NewGrafanaLogProvider(ctx, config.LogProvider.Token, config.LogProvider.BaseUrl)
+		if err != nil {
+			l.Fatalf("Failed to create grafana loki log provider: %v", err)
+		}
+	default:
+		l.Fatalf("Unknown log provider: %s", config.LogProvider.Provider)
+	}
+
 	l.Infof("sending request on %s queue", config.RMQ.RequestQueue)
 	return &Controller{
 		l:              l,
 		gitProvider:    provider,
 		jwtHandler:     jwtHandler,
-		serviceManager: serviceManager,
+		ServiceManager: serviceManager,
 		app:            config.App,
 		imageBuilder:   imageBuilder,
 		config:         config,
 		traefik:        config.Traefik,
+		logProvider:    logProvider,
 	}
 }
