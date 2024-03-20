@@ -61,7 +61,8 @@ const (
 const (
 	EnvironmentLabel  = "environment"
 	OwnerLabel        = "ownedBy"
-	AppLabel          = "app"
+	AppLabel          = "appName"
+	AppIDLabel        = "appID"
 	VisibilityLabel   = "visibility"
 	ImageLabel        = "image"
 	PortLabel         = "port"

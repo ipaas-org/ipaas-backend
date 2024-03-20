@@ -43,14 +43,14 @@ func (c *Controller) CreateUser(ctx context.Context, info *model.UserInfo, role 
 
 	namespace := "ns-" + userCode
 	// networkID, err = c.serviceManager.CreateNewNetwork(ctx, userCode)
-	labels := c.getDefaultLabels(userCode, staticTempEnvironment, "", namespace)
-	if err := c.serviceManager.CreateNewNamespace(ctx, namespace, labels); err != nil {
+	labels := c.getDefaultLabels(userCode, staticTempEnvironment, "", "", namespace)
+	if err := c.ServiceManager.CreateNewNamespace(ctx, namespace, labels); err != nil {
 		c.l.Errorf("error creating new network: %v", err)
 		return nil, err
 	}
 	user.Namespace = namespace
 
-	if _, err := c.serviceManager.CreateNewRegistrySecret(ctx, namespace, c.config.K8s.RegistryUrl, c.config.K8s.RegistryUsername, c.config.K8s.RegistryPassword); err != nil {
+	if _, err := c.ServiceManager.CreateNewRegistrySecret(ctx, namespace, c.config.K8s.RegistryUrl, c.config.K8s.RegistryUsername, c.config.K8s.RegistryPassword); err != nil {
 		c.l.Errorf("error creating new registry secret: %v", err)
 		return nil, err
 	}
