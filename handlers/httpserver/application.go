@@ -21,16 +21,6 @@ type (
 	}
 )
 
-// todo
-// func (h *httpHandler) IsApplicationNameAvailable(c echo.Context) error {
-// 	return respError(c, 501, "not implemented", "", ErrNotImplemented)
-// }
-
-// todo
-// func (h *httpHandler) IsValidGitRepo(c echo.Context) error {
-// 	return respError(c, 501, "not implemented", "", ErrNotImplemented)
-// }
-
 func (h *httpHandler) NewWebApplication(c echo.Context) error {
 	user, msgErr := h.ValidateAccessTokenAndGetUser(c)
 	if msgErr != nil {
