@@ -43,16 +43,24 @@ func (h *httpHandler) RegisterRoutes() {
 	user := authGroup.Group("/user")
 	user.GET("/info", h.UserInfo)
 	user.POST("/update", h.UpdateUser)
+	// todo delete
+	// user.DELETE("/", h.DeleteUser)
 
 	application := authGroup.Group("/application")
 	application.GET("/list/:kind", h.ListApplications)
-	application.GET("/status/:applicationID", h.GetApplicationStatus)
-	application.GET("/:applicationID", h.GetApplication)
-	// application.GET("/logs/:applicationID", h.GetApplicationLogs)
-	application.DELETE("/delete/:applicationID", h.DeleteApplication)
-	// application.PUT("/update/:applicationID", h.UpdateApplication)
 	application.POST("/new/web", h.NewWebApplication)
 	application.POST("/new/template", h.NewApplicationFromTemplate)
+
+	//specific application routes
+	application.GET("/:applicationID", h.GetApplication)
+	// application.PUT("/:applicationID", h.UpdateApplication)
+	application.DELETE("/:applicationID", h.DeleteApplication)
+	// application.GET("/:applicationID/restart", h.RestartApplication)
+	application.GET("/:applicationID/status", h.GetApplicationStatus)
+	// application.GET("/:applicationID/rollout", h.RolloutApplication)
+	application.GET("/:applicationID/logs", h.GetApplicationLogs)
+	// todo, get stats and metrics
+	// application.GET("/:applicationID/stats", h.GetApplicationStats)
 
 	validate := authGroup.Group("/validate")
 	validate.POST("/name", h.IsValidName)
@@ -61,4 +69,23 @@ func (h *httpHandler) RegisterRoutes() {
 	templates := api.Group("/templates")
 	templates.GET("/list", h.ListTemplates)
 	templates.GET("/:code", h.GetTemplate)
+
+	// adminGroup := api.Group("/admin", h.jwtHeaderCheckerMiddleware, h.adminCheckerMiddleware)
+	// adminUser := adminGroup.Group("/user")
+	// adminUser.GET("/list", h.AdminListUsers)
+	// adminUser.GET("/:userID", h.AdminGetUser)
+	// adminUser.PUT("/:userID", h.AdminUpdateUser)
+	// adminUser.DELETE("/:userID", h.AdminDeleteUser)
+	// adminUser.DELETE("/:userID/tokens", h.AdminDeleteUserTokens)
+	// adminUser.GET("/:userID/applications", h.AdminListUserApplications)
+
+	// adminUserApplication := adminUser.Group("/:userID/application/")
+	// adminUserApplication.GET("/:applicationID", h.AdminGetUserApplication)
+	// adminUserApplication.PUT("/:applicationID", h.AdminUpdateUserApplication)
+	// adminUserApplication.DELETE("/:applicationID", h.AdminDeleteUserApplication)
+	// adminUserApplication.GET("/:applicationID/restart", h.AdminRestartUserApplication)
+	// adminUserApplication.GET("/:applicationID/rollout", h.AdminRolloutUserApplication)
+
+	// applicationAdmin := adminGroup.Group("/application")
+
 }
