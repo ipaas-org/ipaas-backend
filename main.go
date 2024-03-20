@@ -109,7 +109,7 @@ func main() {
 	}
 	rmq.Close()
 
-	containerEventHandler, err := events.NewContainerEventHandler(ctx, c, l)
+	containerEventHandler, err := events.NewContainerEventHandler(ctx, c, c.ServiceManager.GetEventsChan, l)
 	if err != nil {
 		l.Fatalf("main - events.NewContainerEventHandler - error creating container event handler: %s", err.Error())
 	}
@@ -160,7 +160,7 @@ func main() {
 			case StartHTTPHandler:
 				go httpserver.StartRouter(ctx, httpHandler, conf, StartHTTPHandler, RoutineMonitor)
 			case StartContainerEventHandler:
-				go events.StartConainerEventHandler(ctx, containerEventHandler, StartContainerEventHandler, RoutineMonitor)
+				go events.StartContainerEventHandler(ctx, containerEventHandler, StartContainerEventHandler, RoutineMonitor)
 			default:
 			}
 		default:
