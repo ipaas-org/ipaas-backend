@@ -68,3 +68,10 @@ for future:
 - [ ] paginate the list of repos
 - [ ] add git service method that creates a channel for a repo that send info about updates to the repo
 - [ ] repos shouldnt return a bool in updates and delete cause it's not really used
+
+# infos and observations
+
+to retrive logs correctly from the ui:
+
+1. get logs
+2. use the last timestamp in the `from` parameter and add `X-Last-Log-Nano` header with the same timestamp to prevent the server from returning the same single log line
