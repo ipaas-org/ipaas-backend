@@ -21,6 +21,7 @@ type (
 		Database    `yaml:"database"`
 		Traefik     `yaml:"traefik"`
 		K8s         `yaml:"k8s"`
+		LogProvider `yaml:"logProvider"`
 	}
 
 	App struct {
@@ -78,6 +79,12 @@ type (
 		RegistryUrl      string `env-required:"true" yaml:"registryUrl" env:"K8S_REGISTRY_URL"`
 		RegistryUsername string `env-required:"true" yaml:"registryUsername" env:"K8S_REGISTRY_USERNAME"`
 		RegistryPassword string `env-required:"true" yaml:"registryPassword" env:"K8S_REGISTRY_PASSWORD"`
+	}
+
+	LogProvider struct {
+		Provider string `env-required:"true" yaml:"provider" env:"LOG_PROVIDER"`
+		BaseUrl  string `env-required:"true" yaml:"baseUrl" env:"LOG_PROVIDER_BASE_URL"`
+		Token    string `env-required:"true" env:"LOG_PROVIDER_TOKEN"`
 	}
 )
 

@@ -36,3 +36,7 @@ k8s:
   cpuResource: "200m"
   memoryResource: "512Mi"
   registryUrl: "registry.cargoway.cloud"
+
+logProvider:
+  provider: "grafana-loki"
+  baseUrl: "http://localhost:8090"
