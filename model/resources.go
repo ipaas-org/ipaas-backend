@@ -7,15 +7,22 @@ type (
 		Labels    []KeyValue `bson:"labels" json:"labels"`
 	}
 
+	ReplicaSet struct {
+		BaseResource
+		CurrentReplicas int32 `bson:"currentReplicas" json:"currentReplicas"`
+		DesiredReplicas int32 `bson:"desiredReplicas" json:"desiredReplicas"`
+	}
+
 	Deployment struct {
 		BaseResource
-		Replicas      int32      `bson:"replicas" json:"replicas"`
-		ImageRegistry string     `bson:"imageRegistry" json:"imageRegistry"`
-		CpuLimits     string     `bson:"cpuLimits" json:"cpuLimits"`
-		MemoryLimits  string     `bson:"memoryLimits" json:"memoryLimits"`
-		Port          int32      `bson:"port" json:"port"`
-		Volume        *Volume    `bson:"volumes" json:"volumes"`
-		ConfigMap     *ConfigMap `bson:"configMap" json:"configMap"`
+		Replicas       int32      `bson:"replicas" json:"replicas"`
+		ImageRegistry  string     `bson:"imageRegistry" json:"imageRegistry"`
+		CpuLimits      string     `bson:"cpuLimits" json:"cpuLimits"`
+		MemoryLimits   string     `bson:"memoryLimits" json:"memoryLimits"`
+		Port           int32      `bson:"port" json:"port"`
+		CurrentPodName string     `bson:"currentPodName" json:"currentPodName"`
+		Volume         *Volume    `bson:"volumes" json:"volumes"`
+		ConfigMap      *ConfigMap `bson:"configMap" json:"configMap"`
 	}
 
 	Volume struct {
