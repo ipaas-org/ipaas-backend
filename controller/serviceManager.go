@@ -11,7 +11,7 @@ import (
 func (c *Controller) getDefaultLabels(owner, environment, app, appID, resourceName string) []model.KeyValue {
 	labels := []model.KeyValue{
 		{Key: model.OwnerLabel, Value: owner},
-		{Key: model.EnvironmentLabel, Value: staticTempEnvironment},
+		{Key: model.EnvironmentLabel, Value: environment},
 		{Key: model.IpaasVersionLabel, Value: c.config.Version},
 		{Key: model.IpaasManagedLabel, Value: "true"},
 		{Key: model.ResourceNameLabel, Value: resourceName},
