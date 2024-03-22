@@ -110,7 +110,7 @@ func (c *Controller) createNewStorageKindService(ctx context.Context, template *
 
 	GiSize := int64(1 * 1024 * 1024 * 1024) // 1Gi
 	storageClass := "longhorn-test"
-	pvc, err := c.CreatePersistantVolumeClaim(ctx, app, user, storageClass, GiSize)
+	pvc, err := c.createPersistantVolumeClaim(ctx, app, user, storageClass, GiSize)
 	if err != nil {
 		return err
 	}

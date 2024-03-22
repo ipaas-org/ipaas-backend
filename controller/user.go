@@ -44,7 +44,7 @@ func (c *Controller) CreateUser(ctx context.Context, info *model.UserInfo, role 
 	namespace := "ns-" + userCode
 	// networkID, err = c.serviceManager.CreateNewNetwork(ctx, userCode)
 	labels := c.getDefaultLabels(userCode, staticTempEnvironment, "", "", namespace)
-	if err := c.ServiceManager.CreateNewNamespace(ctx, namespace, labels); err != nil {
+	if _, err := c.ServiceManager.CreateNewNamespace(ctx, namespace, labels); err != nil {
 		c.l.Errorf("error creating new network: %v", err)
 		return nil, err
 	}

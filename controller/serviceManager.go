@@ -8,6 +8,10 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 )
 
+const (
+	gracePeriod = 120
+)
+
 func (c *Controller) getDefaultLabels(owner, environment, app, appID, resourceName string) []model.KeyValue {
 	labels := []model.KeyValue{
 		{Key: model.OwnerLabel, Value: owner},
@@ -100,7 +104,7 @@ func (c *Controller) createIngressRoute(ctx context.Context, app *model.Applicat
 	return ingressRoute, nil
 }
 
-func (c *Controller) CreatePersistantVolumeClaim(ctx context.Context, app *model.Application, user *model.User, storageClass string, GiSize int64) (*model.PersistentVolumeClaim, error) {
+func (c *Controller) createPersistantVolumeClaim(ctx context.Context, app *model.Application, user *model.User, storageClass string, GiSize int64) (*model.PersistentVolumeClaim, error) {
 	c.l.Debugf("creating persistant volume claim for application %s", app.Name)
 	pvcName := fmt.Sprintf("pvc-%s", app.Name)
 	pvcLabels := c.getDefaultLabels(user.Code, staticTempEnvironment, app.Name, app.ID.Hex(), pvcName)
@@ -111,4 +115,66 @@ func (c *Controller) CreatePersistantVolumeClaim(ctx context.Context, app *model
 	}
 	c.l.Debugf("created persistant volume claim for %s in namespace: %s with name: %s", app.Name, pvc.Namespace, pvc.Name)
 	return pvc, nil
+}
+
+func (c *Controller) deleteDeployment(ctx context.Context, app *model.Application, user *model.User) error {
+	c.l.Debugf("deleting deployment %s", app.Service.Deployment.Name)
+	if err := c.ServiceManager.DeleteDeployment(ctx, user.Namespace, app.Service.Deployment.Name, gracePeriod); err != nil {
+		c.l.Errorf("error deleting deployment %s: %v", app.Service.Deployment.Name, err)
+		return err
+	}
+	c.l.Debugf("deployment %s deleted succesfully", app.Service.Deployment.Name)
+	return nil
+}
+
+func (c *Controller) deleteService(ctx context.Context, app *model.Application, user *model.User) error {
+	c.l.Debugf("deleting service %s", app.Service.Name)
+	if err := c.ServiceManager.DeleteService(ctx, user.Namespace, app.Service.Name, gracePeriod); err != nil {
+		c.l.Errorf("error deleting service %s: %v", app.Service.Name, err)
+		return err
+	}
+	c.l.Debugf("service %s delete succesfully", app.Service.Name)
+	return nil
+}
+
+func (c *Controller) deleteIngressRoute(ctx context.Context, app *model.Application, user *model.User) error {
+	if app.Service.IngressRoute == nil {
+		c.l.Debug("trying to delete ingressRoute from application without ingressRoute")
+		return nil
+	}
+	c.l.Debugf("deleting ingressRoute %s", app.Service.IngressRoute.Name)
+	if err := c.ServiceManager.DeleteIngressRoute(ctx, user.Namespace, app.Service.IngressRoute.Name, gracePeriod); err != nil {
+		c.l.Errorf("error deleting ingressRoute %s: %v", app.Service.IngressRoute.Name, err)
+		return err
+	}
+	c.l.Debugf("ingressRoute %s delete succesfully", app.Service.IngressRoute.Name)
+	return nil
+}
+
+func (c *Controller) deleteConfigMap(ctx context.Context, app *model.Application, user *model.User) error {
+	if app.Service.Deployment.ConfigMap == nil {
+		c.l.Debugf("trying to delete config map from application without a config map")
+		return nil
+	}
+	c.l.Debugf("deleting configMap %s", app.Service.Deployment.ConfigMap.Name)
+	if err := c.ServiceManager.DeleteConfigMap(ctx, user.Namespace, app.Service.Deployment.ConfigMap.Name, gracePeriod); err != nil {
+		c.l.Errorf("error deleting configMap %s: %v", app.Service.Deployment.ConfigMap.Name, err)
+		return err
+	}
+	c.l.Debugf("configMap %s delete succesfully", app.Service.Deployment.ConfigMap.Name)
+	return nil
+}
+
+func (c *Controller) deletePersistantVolumeClmain(ctx context.Context, app *model.Application, user *model.User) error {
+	if app.Service.Deployment.Volume == nil {
+		c.l.Debugf("trying to delete PVC from application without a PVC")
+		return nil
+	}
+	c.l.Debugf("deleting PVC %s", app.Service.Deployment.ConfigMap.Name)
+	if err := c.ServiceManager.DeletePersistantVolumeClmain(ctx, user.Namespace, app.Service.Deployment.ConfigMap.Name, gracePeriod); err != nil {
+		c.l.Errorf("error deleting PVC %s: %v", app.Service.Deployment.ConfigMap.Name, err)
+		return err
+	}
+	c.l.Debugf("PVC %s delete succesfully", app.Service.Deployment.ConfigMap.Name)
+	return nil
 }
