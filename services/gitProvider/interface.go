@@ -23,6 +23,7 @@ type Provider interface {
 	//get the branches of a repo and returns the default branch, all the branches or an error
 	//if the repo was not found or the user does not have access to it
 	GetRepoBranches(accessToken, username, repo string) (string, []string, error)
+	GetLastCommitHash(accessToken, username, repo, branch string) (string, error)
 	//todo
 	//SetListenerToRepo() //webhook
 	//RemoveListenerFromRepo()
@@ -32,4 +33,5 @@ var (
 	ErrNotImplemented   error = errors.New("not implemented")
 	ErrRateLimitReached error = errors.New("rate limit reached")
 	ErrRepoNotFound     error = errors.New("repo not found")
+	ErrNoCommitsFound   error = errors.New("no commits found")
 )

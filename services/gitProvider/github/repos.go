@@ -1,6 +1,7 @@
 package github
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,9 +13,21 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+type (
+	GithubCommit struct {
+		SHA    string               `json:"sha"`
+		Commit GithubCommitInternal `json:"commit"`
+	}
+
+	GithubCommitInternal struct {
+		Message string `json:"message"`
+	}
+)
+
 const (
-	branchesBaseUrl = "https://api.github.com/repos/%s/%s/branches"
 	baseUrlMetadata = "https://api.github.com/repos/%s/%s"
+	baseUrlCommits  = "https://api.github.com/repos/%s/%s/commits?sha=%s"
+	baseUrlBranches = "https://api.github.com/repos/%s/%s/branches"
 	baseUrlTag      = "https://api.github.com/repos/%s/%s/tags"
 	baseUrlRelease  = "https://api.github.com/repos/%s/%s/releases"
 )
@@ -80,7 +93,7 @@ func (g *GithubProvider) getDefaultBranch(accessToken, username, repo string) (s
 
 func (g *GithubProvider) getBranches(username, repo, token string) ([]string, error) {
 	//get the branches
-	request, err := http.NewRequest("GET", fmt.Sprintf(branchesBaseUrl, username, repo), nil)
+	request, err := http.NewRequest("GET", fmt.Sprintf(baseUrlBranches, username, repo), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -123,4 +136,47 @@ func (g *GithubProvider) GetUserAndRepo(url string) (string, string, error) {
 	split := strings.Split(url, "/")
 
 	return split[len(split)-2], split[len(split)-1], nil
+}
+
+func (g *GithubProvider) GetLastCommitHash(accessToken, username, repo, branch string) (string, error) {
+	url := fmt.Sprintf(baseUrlCommits, username, repo, branch)
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	request.Header.Set("Authorization", "token "+accessToken)
+	resp, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	jsonBody := string(body)
+
+	if resp.StatusCode != 200 {
+		if resp.StatusCode == 403 {
+			return "", gitProvider.ErrRateLimitReached
+		}
+		if resp.StatusCode == 404 {
+			return "", gitProvider.ErrRepoNotFound
+		}
+		return "", fmt.Errorf("error getting last commit info for %s/%s [%s]: %v", username, repo, resp.Status, jsonBody)
+	}
+
+	var RepoCommits []GithubCommit
+	err = json.Unmarshal(body, &RepoCommits)
+	if err != nil {
+		return "", err
+	}
+
+	if len(RepoCommits) == 0 {
+		return "", gitProvider.ErrNoCommitsFound
+	}
+
+	return RepoCommits[0].SHA, nil
 }
