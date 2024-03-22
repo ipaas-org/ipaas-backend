@@ -22,17 +22,27 @@ type K8sOrchestratedServiceManager struct {
 }
 
 func NewK8sOrchestratedServiceManager(kubeConfigPath, cpuResource, memoryResource string) (*K8sOrchestratedServiceManager, error) {
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
+	var config *rest.Config
+	var err error
+	if kubeConfigPath == "inside" {
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, fmt.Errorf("fail to build the k8s config. Error - %s", err)
+		}
+
+	} else {
+		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("error getting kubernetes config: %v", err)
+		}
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("error getting kubernetes config: %v", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, fmt.Errorf("error getting kubernetes config: %v", err)
-	}
-
-	traefikClient, err := traefikv.NewForConfig(kubeConfig)
+	traefikClient, err := traefikv.NewForConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("error creating traefik client: %v", err)
 	}
@@ -48,7 +58,7 @@ func NewK8sOrchestratedServiceManager(kubeConfigPath, cpuResource, memoryResourc
 	}
 	return &K8sOrchestratedServiceManager{
 		clientset:      clientset,
-		kubeConfig:     kubeConfig,
+		kubeConfig:     config,
 		traefikClient:  traefikClient,
 		cpuResource:    cpuQuantity,
 		memoryResource: memoryQuantity,

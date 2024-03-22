@@ -33,7 +33,7 @@ const (
 )
 
 func main() {
-	conf, err := config.NewConfig()
+	conf, err := config.NewConfig("./config/")
 	if err != nil {
 		log.Fatalln(err)
 	}

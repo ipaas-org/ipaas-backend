@@ -104,7 +104,7 @@ func NewConfig(configPath ...string) (*Config, error) {
 		}
 	}
 
-	mustCheck := []string{"JWT_SECRET", "GIT_PROVIDER_CLIENT_ID", "GIT_PROVIDER_CLIENT_SECRET", "TRAEFIK_USERNAME", "TRAEFIK_PASSWORD"}
+	mustCheck := []string{"JWT_SECRET", "GIT_PROVIDER_CLIENT_ID", "GIT_PROVIDER_CLIENT_SECRET"}
 
 	for _, v := range mustCheck {
 		logrus.Debug(os.Getenv(v))

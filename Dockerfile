@@ -1,28 +1,26 @@
-FROM docker as docker
+# FROM docker as docker
 
-FROM golang:1.20.1-alpine3.17 as modules
+FROM golang:1.22.1-alpine3.19 as modules
 COPY go.mod go.sum /modules/
 WORKDIR /modules
 RUN go mod download
 
-FROM golang:1.20.1-alpine3.17 as builder
+FROM golang:1.22.1-alpine3.19 as builder
 COPY --from=modules /go/pkg /go/pkg
 COPY . /app
 WORKDIR /app
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build  -o /bin/app .
 
-FROM scratch
+# FROM scratch
 # use these 3 lines for debugging purposes
-# FROM ubuntu 
-# RUN apt update
-# RUN apt install -y git curl iputils-ping
-COPY --from=docker /usr/local/bin/docker /usr/local/bin/docker
-COPY --from=docker /usr/local/libexec/docker/cli-plugins/docker-buildx /usr/local/libexec/docker/cli-plugins/docker-buildx
-COPY --from=builder /app/config.yml /
+FROM ubuntu 
+RUN apt update
+RUN apt install -y git curl iputils-ping
+# RUN mkdir -p /ipaas
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /bin/app /app
-CMD ["/app"]
+COPY --from=builder /bin/app /home/app
+CMD ["/home/app"]
 
 EXPOSE 8082
 
