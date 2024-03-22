@@ -55,7 +55,7 @@ type (
 		BaseResource
 		Entrypoints []string `bson:"entrypoints" json:"entrypoints"`
 		Domain      string   `bson:"domain" json:"domain"`
-		Service     *Service `bson:"service" json:"service"`
+		// Service     *Service `bson:"service" json:"service"`
 	}
 
 	ContainerStatus string
