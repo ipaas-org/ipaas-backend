@@ -41,6 +41,9 @@ const (
 	//git providers errors
 	ErrRateLimitReached HttpErrorType = "rate_limit_reached"
 
-	//log erorrs
+	//log errors
 	ErrInvalidXLastLogNano HttpErrorType = "invalid_x_last_log_nano"
+
+	//update errors
+	ErrInvalidOperation HttpErrorType = "invalid_operation"
 )

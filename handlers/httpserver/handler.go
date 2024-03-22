@@ -53,9 +53,9 @@ func (h *httpHandler) RegisterRoutes() {
 
 	//specific application routes
 	application.GET("/:applicationID", h.GetApplication)
-	// application.PUT("/:applicationID", h.UpdateApplication)
-	application.DELETE("/:applicationID", h.DeleteApplication)
-	// application.GET("/:applicationID/restart", h.RestartApplication)
+	application.PATCH("/:applicationID/update", h.UpdateApplication)
+	application.DELETE("/:applicationID/delete", h.DeleteApplication)
+	application.GET("/:applicationID/redeploy", h.RedeployApplication)
 	application.GET("/:applicationID/status", h.GetApplicationStatus)
 	// application.GET("/:applicationID/rollout", h.RolloutApplication)
 	application.GET("/:applicationID/logs", h.GetApplicationLogs)
