@@ -15,11 +15,13 @@ var (
 	ErrInvalidToken = errors.New("invalid token")
 
 	//application errors
-	ErrApplicationNameNotAvailable = errors.New("name is not available")
-	ErrUnsupportedApplicationKind  = errors.New("unsupported application kind")
-	ErrInvalidPort                 = errors.New("invalid port")
-	ErrInvalidEnv                  = errors.New("invalid env")
-	ErrNoChanges                   = errors.New("no changes")
+	ErrApplicationNameNotAvailable     = errors.New("name is not available")
+	ErrUnsupportedApplicationKind      = errors.New("unsupported application kind")
+	ErrInvalidPort                     = errors.New("invalid port")
+	ErrInvalidEnv                      = errors.New("invalid env")
+	ErrNoChanges                       = errors.New("no changes")
+	ErrLastVersionAlreadyDeployed      = errors.New("last version already deployed")
+	ErrInvalidOperationWithCurrentKind = errors.New("invalid operation with current kind")
 
 	//templates errors
 	ErrMissingRequiredEnvForTemplate = errors.New("missing required env for template")

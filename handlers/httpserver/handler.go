@@ -57,7 +57,7 @@ func (h *httpHandler) RegisterRoutes() {
 	application.DELETE("/:applicationID/delete", h.DeleteApplication)
 	application.GET("/:applicationID/redeploy", h.RedeployApplication)
 	application.GET("/:applicationID/status", h.GetApplicationStatus)
-	// application.GET("/:applicationID/rollout", h.RolloutApplication)
+	application.GET("/:applicationID/rollout", h.RolloutApplication)
 	application.GET("/:applicationID/logs", h.GetApplicationLogs)
 	// todo, get stats and metrics
 	// application.GET("/:applicationID/stats", h.GetApplicationStats)

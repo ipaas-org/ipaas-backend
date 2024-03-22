@@ -206,7 +206,7 @@ func (h *httpHandler) UpdateApplication(c echo.Context) error {
 	}
 
 	user, app, err := h.GetUserAndApplication(c)
-	if err != nil {
+	if user == nil || app == nil {
 		return err
 	}
 
@@ -236,7 +236,7 @@ func (h *httpHandler) UpdateApplication(c echo.Context) error {
 
 func (h *httpHandler) RedeployApplication(c echo.Context) error {
 	user, app, err := h.GetUserAndApplication(c)
-	if err != nil {
+	if user == nil || app == nil {
 		return err
 	}
 
@@ -251,4 +251,35 @@ func (h *httpHandler) RedeployApplication(c echo.Context) error {
 	}
 
 	return respSuccess(c, 200, "application is restarting")
+}
+
+func (h *httpHandler) RolloutApplication(c echo.Context) error {
+	user, app, err := h.GetUserAndApplication(c)
+	if user == nil || app == nil {
+		return err
+	}
+
+	if user.Code != app.Owner {
+		return respError(c, 404, "inexisting applcation id", fmt.Sprintf("the application with id=%s does not exists", app.ID.Hex()), ErrInexistingApplication)
+	}
+
+	ctx := c.Request().Context()
+
+	if err := h.controller.RolloutApplication(ctx, user, app); err != nil {
+		switch err {
+		case controller.ErrInvalidOperationWithCurrentKind:
+			return respError(c, 400, "invalid operation with current kind", "the application kind does not support this operation", ErrInvalidOperationWithCurrentKind)
+		case controller.ErrInvalidOperationInCurrentState:
+			return respError(c, 400, "invalid operation in current state", fmt.Sprintf("the application is in %q state, this operation is not allowed in that state", app.State), ErrInvalidOperationInCurrentState)
+		case controller.ErrLastVersionAlreadyDeployed:
+			return respError(c, 400, "last version already up to date", "the last version of the application is already up to date", ErrVersionUpToDate)
+		default:
+			return respError(c, 500, "unexpected error", "", ErrUnexpected)
+		}
+	}
+	resp := map[string]interface{}{
+		"applicationID": app.ID.Hex(),
+		"state":         app.State,
+	}
+	return respSuccess(c, 200, "application is rolling out", resp)
 }

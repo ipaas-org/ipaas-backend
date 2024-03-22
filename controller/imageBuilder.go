@@ -6,8 +6,6 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 )
 
-// TODO: IMPORTANTE l'user id quando si crea l'immagine non può essere la mail, meglio usare l'id dell'utente o il suo username
-// TODO: non accettare richieste di build image di un applicazione se l'applicazione è già in status building o starting
 func (c *Controller) BuildImage(ctx context.Context, app *model.Application, providerToken string) error {
 	if app.State == model.ApplicationStateBuilding ||
 		app.State == model.ApplicationStateStarting {

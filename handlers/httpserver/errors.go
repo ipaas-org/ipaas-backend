@@ -22,10 +22,12 @@ const (
 	ErrNameAlreadyTaken HttpErrorType = "name_already_taken"
 
 	// application related errors
-	ErrNameTaken                      HttpErrorType = "name_taken"
-	ErrInvalidApplicationID           HttpErrorType = "invalid_application_id"
-	ErrInexistingApplication          HttpErrorType = "inexisting_application"
-	ErrInvalidOperationInCurrentState HttpErrorType = "invalid_operation_in_current_state"
+	ErrNameTaken                       HttpErrorType = "name_taken"
+	ErrInvalidApplicationID            HttpErrorType = "invalid_application_id"
+	ErrInexistingApplication           HttpErrorType = "inexisting_application"
+	ErrInvalidOperationInCurrentState  HttpErrorType = "invalid_operation_in_current_state"
+	ErrInvalidOperationWithCurrentKind HttpErrorType = "invalid_operation_with_current_kind"
+	ErrVersionUpToDate                 HttpErrorType = "version_up_to_date"
 
 	//template related errors
 	ErrTemplateCodeNotFound          HttpErrorType = "template_code_not_found"

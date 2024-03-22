@@ -27,3 +27,18 @@ func (c *Controller) ValidateGitRepo(ctx context.Context, user *model.User, repo
 	}
 	return defaultBranch, branches, nil
 }
+
+func (c *Controller) GetLastCommitHash(ctx context.Context, user *model.User, repo string, branch string) (string, error) {
+	// return c.gitProvider.GetLastCommitHash(ctx, accessToken, username, repo, branch)
+	username, repo, err := c.gitProvider.GetUserAndRepo(repo)
+	if err != nil {
+		return "", err
+	}
+
+	commitHash, err := c.gitProvider.GetLastCommitHash(user.Info.GithubAccessToken, username, repo, branch)
+	if err != nil {
+		c.l.Errorf("error getting last commit hash from git provider: %v", err)
+		return "", err
+	}
+	return commitHash, nil
+}

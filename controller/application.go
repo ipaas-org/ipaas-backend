@@ -117,10 +117,27 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 	c.l.Infof("create application deployment for %s[%s]", app.Name, app.ID.Hex())
 	//update status of application to starting and set the built commit to builtCommit
 	app.State = model.ApplicationStateStarting
-	app.BuiltCommit = BuildCommit
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application: %v", err)
 		return err
+	}
+
+	app.BuiltCommit = BuildCommit
+	if app.Service != nil {
+		c.l.Infof("updating deployment with new image")
+
+		deployment, err := c.ServiceManager.UpdateDeployment(ctx, user.Namespace, app.Service.Deployment.Name, registryImage, app.Service.Deployment.Replicas, app.Service.Deployment.Port, app.Service.Deployment.Labels, "")
+		if err != nil {
+			c.l.Errorf("error updating deployment: %v", err)
+			return err
+		}
+		deployment.ConfigMap = app.Service.Deployment.ConfigMap
+		deployment.Volume = app.Service.Deployment.Volume
+		app.Service.Deployment = deployment
+		if err := c.updateApplication(ctx, app); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	configMap, err := c.createConfigMap(ctx, app, user, app.Envs)
@@ -386,9 +403,9 @@ func (c *Controller) UpdateApplication(ctx context.Context, app *model.Applicati
 		}
 	}
 
-	if !hasSomethingChanged{
+	if !hasSomethingChanged {
 		return ErrNoChanges
-	} 
+	}
 
 	updatedDeployment, err := c.ServiceManager.UpdateDeployment(
 		ctx,
@@ -421,5 +438,40 @@ func (c *Controller) UpdateApplication(ctx context.Context, app *model.Applicati
 		return err
 	}
 	c.l.WithFields(fields).Infof("application updated succesfully")
+	return nil
+}
+
+func (c *Controller) RolloutApplication(ctx context.Context, user *model.User, app *model.Application) error {
+	c.l.Infof("rollout of deployment %s (appID=%s) of user %s", app.Service.Deployment.Name, app.ID.Hex(), user.Code)
+	if app.Kind != model.ApplicationKindWeb {
+		return ErrInvalidOperationWithCurrentKind
+	}
+
+	if app.State != model.ApplicationStateRunning &&
+		app.State != model.ApplicationStateFailed &&
+		app.State != model.ApplicationStateCrashed &&
+		app.State != model.ApplicationStateRollingOut {
+		return ErrInvalidOperationInCurrentState
+	}
+
+	newLastHash, err := c.GetLastCommitHash(ctx, user, app.GithubRepo, app.GithubBranch)
+	if err != nil {
+		c.l.Errorf("error getting last commit hash: %v", err)
+		return err
+	}
+	if newLastHash == app.BuiltCommit {
+		c.l.Infof("no new commit to rollout")
+		return ErrLastVersionAlreadyDeployed
+	}
+
+	app.State = model.ApplicationStateRollingOut
+	if err := c.updateApplication(ctx, app); err != nil {
+		return err
+	}
+
+	if err := c.BuildImage(ctx, app, user.Info.GithubAccessToken); err != nil {
+		c.l.Errorf("error building image: %v", err)
+		return err
+	}
 	return nil
 }
