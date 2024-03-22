@@ -75,6 +75,8 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 		if err != nil {
 			l.Fatalf("Failed to create grafana loki log provider: %v", err)
 		}
+	case logprovider.LogProviderMock:
+		l.Warnf("using mock log provider, currently maps to disabled")
 	default:
 		l.Fatalf("Unknown log provider: %s", config.LogProvider.Provider)
 	}

@@ -12,4 +12,5 @@ type LogProvider interface {
 
 const (
 	LogProviderGrafanaLoki = "grafana-loki"
+	LogProviderMock        = "mock"
 )
