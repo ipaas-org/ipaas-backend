@@ -49,11 +49,13 @@ func (r *RabbitMQ) Connect() error {
 	if err != nil {
 		return fmt.Errorf("ampq.Dial: %w", err)
 	}
+	r.l.Debug("connected to rmq")
 
 	r.Channel, err = r.Connection.Channel()
 	if err != nil {
 		return fmt.Errorf("r.Connection.Channel: %w", err)
 	}
+	r.l.Debug("got rmq channel")
 
 	if err = r.Channel.Qos(1, 0, false); err != nil {
 		return fmt.Errorf("r.Channel.Qos: %w", err)
@@ -70,6 +72,7 @@ func (r *RabbitMQ) Connect() error {
 	if err != nil {
 		return fmt.Errorf("r.Channel.QueueDeclare: %w", err)
 	}
+	r.l.Debug("create request queue")
 
 	r.Delivery, err = r.Channel.Consume(
 		responseQueue.Name, // queue
@@ -83,6 +86,7 @@ func (r *RabbitMQ) Connect() error {
 	if err != nil {
 		return fmt.Errorf("r.Channel.Consume: %w", err)
 	}
+	r.l.Debug("create response queue")
 
 	return nil
 }

@@ -108,6 +108,7 @@ func main() {
 		l.Fatalf("main - rmq.Connect - error connecting to rabbitmq: %s", err.Error())
 	}
 	rmq.Close()
+	l.Debugf("closing rmq connection")
 
 	containerEventHandler, err := events.NewContainerEventHandler(ctx, c, c.ServiceManager.GetEventsChan, l)
 	if err != nil {
@@ -165,7 +166,6 @@ func main() {
 			}
 		default:
 		}
-
 		time.Sleep(10 * time.Millisecond)
 	}
 }
