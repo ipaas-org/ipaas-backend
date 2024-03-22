@@ -13,7 +13,7 @@ import (
 
 // 1 * 1024 * 1024 * 1024 = 1Gi
 func (k K8sOrchestratedServiceManager) CreateNewPersistentVolumeClaim(ctx context.Context, namespace, pvcName, storageClassName string, storageSize int64, labels []model.KeyValue) (*model.PersistentVolumeClaim, error) {
-	k8sLabels := convertModelKeyValuesToLables(labels)
+	k8sLabels := convertModelDataToK8sData(labels)
 	storageQuantity := resource.NewQuantity(storageSize, resource.BinarySI)
 	fmt.Printf("resource %v\n", *storageQuantity)
 	pvc, err := k.clientset.CoreV1().PersistentVolumeClaims(namespace).
@@ -50,4 +50,18 @@ func (k K8sOrchestratedServiceManager) CreateNewPersistentVolumeClaim(ctx contex
 		AccessModes:      string(corev1.ReadWriteOncePod),
 		StorageSize:      pvc.Spec.Resources.Limits.Storage().Value(),
 	}, nil
+}
+
+func (k *K8sOrchestratedServiceManager) DeletePersistantVolumeClmain(ctx context.Context, namespace, pvcName string, gracePeriod int64) error {
+	grace := &gracePeriod
+	if gracePeriod < 0 {
+		grace = nil
+	}
+	err := k.clientset.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, pvcName, metav1.DeleteOptions{
+		GracePeriodSeconds: grace,
+	})
+	if err != nil {
+		return fmt.Errorf("error deleting PVC: %v", err)
+	}
+	return nil
 }
