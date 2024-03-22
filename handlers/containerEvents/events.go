@@ -25,6 +25,7 @@ type ContainerEventHandler struct {
 }
 
 func NewContainerEventHandler(ctx context.Context, controller *controller.Controller, watchGenerator watchGeneratorFunc, l *logrus.Logger) (*ContainerEventHandler, error) {
+	l.Debug("creating container handler")
 	c := new(ContainerEventHandler)
 	c.controller = controller
 	c.l = l
@@ -34,6 +35,7 @@ func NewContainerEventHandler(ctx context.Context, controller *controller.Contro
 	if err != nil {
 		return nil, fmt.Errorf("error getting watch: %v", err)
 	}
+	l.Debug("created watch for container events")
 	c.watch = w
 	return c, nil
 }
@@ -112,10 +114,15 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 			}
 
 			if state.Running != nil {
+				if app.Service == nil || app.Service.Deployment == nil {
+					c.l.Warnf("application %s has no service or deployment, probably currently being created, updating", app.Name)
+					c.controller.AddCurrentPodToApplication(ctx, app.ID, pod.Name)
+					continue
+				}
 				c.l.Info("currentPodName: ", app.Service.Deployment.CurrentPodName)
 				if app.Service.Deployment.CurrentPodName != "" {
 					if app.Service.Deployment.CurrentPodName != pod.Name {
-						c.l.Warnf("application %s has a running container %s, but it's not the one we're watching %s, ignoring", app.Name, app.Service.Deployment.CurrentPodName, pod.Name)
+						c.l.Warnf("application %s has a running container %s, but it's not the one we're watching %s, ignoring", app.Name, pod.Name, app.Service.Deployment.CurrentPodName)
 						continue
 					}
 				} else {
@@ -123,12 +130,12 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 					app.Service.Deployment.CurrentPodName = pod.Name
 					if _, err := c.controller.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 						c.l.Errorf("error updating application: %v", err)
-						continue
 					}
 				}
 				c.l.Debugf("state running: %+v\n", state.Running)
 				c.l.Infof("container %s is running", pod.Name)
-				if app.State != model.ApplicationStateRunning {
+				if app.State != model.ApplicationStateRunning &&
+					app.State != model.ApplicationStateDeleting {
 					c.l.Infof("updating application state from %s to running", app.State)
 					app.State = model.ApplicationStateRunning
 					if _, err := c.controller.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
@@ -141,13 +148,19 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 
 			if state.Terminated != nil {
 				if app.Service.Deployment.CurrentPodName != pod.Name {
-					c.l.Warnf("application %s has a terminated container %s, but it's not the one we're watching %s, ignoring", app.Name, app.Service.Deployment.CurrentPodName, pod.Name)
+					c.l.Warnf("application %s has a terminated container %s, but it's not the one we're watching %s, ignoring", app.Name, pod.Name, app.Service.Deployment.CurrentPodName)
 					continue
 				}
 				c.l.Debugf("state terminated: %+v\n", state.Terminated)
 				c.l.Infof("container %s is terminated with %d status code at %v", pod.Name, state.Terminated.ExitCode, state.Terminated.FinishedAt)
 				if app.State == model.ApplicationStateDeleting {
-					c.l.Info("application is being deleted or already crashed, passing")
+					if event.Type == watch.Deleted {
+						if _, err := c.controller.ApplicationRepo.DeleteByID(ctx, app.ID); err != nil {
+							c.l.Errorf("error deleting application %s: %v", app.ID.Hex(), err)
+						}
+					} else {
+						c.l.Info("application is being deleted or already crashed, passing")
+					}
 					continue
 				}
 				c.l.Info("unexpected container death, notifying user")
@@ -164,6 +177,10 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 				switch state.Waiting.Reason {
 				case "ContainerCreating":
 					c.l.Infof("creating container %s", pod.Name)
+					if app.Service == nil || app.Service.Deployment == nil {
+						c.l.Warnf("application %s has no service or deployment, probably currently being created, ignoring", app.Name)
+						continue
+					}
 					if app.Service.Deployment.CurrentPodName != "" {
 						c.l.Warnf("application %s already has a running container, deleting it", app.Name)
 						if err := c.controller.ServiceManager.DeletePod(ctx, pod.Namespace, app.Service.Deployment.CurrentPodName); err != nil {
