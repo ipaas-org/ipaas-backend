@@ -3,10 +3,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -193,24 +195,40 @@ loop:
 	return nil
 }
 
-func (c *Controller) DeleteApplication(ctx context.Context, application *model.Application) error {
+func (c *Controller) DeleteApplication(ctx context.Context, app *model.Application, user *model.User) error {
 	//! this version is not able to delete a pending build cause it's unable to delete a message
 	// in the rmq queue, in the next version it will not be a problem cause we will also be able to stop the building process
-	if application.State == model.ApplicationStateBuilding ||
-		application.State == model.ApplicationStateStarting {
+	if app.State == model.ApplicationStateBuilding ||
+		app.State == model.ApplicationStateStarting {
 		return ErrInvalidOperationInCurrentState
 	}
 
-	application.State = model.ApplicationStateDeleting
-	if _, err := c.ApplicationRepo.UpdateByID(ctx, application, application.ID); err != nil {
+	app.State = model.ApplicationStateDeleting
+	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application: %v", err)
 		return err
 	}
 
-	if _, err := c.ApplicationRepo.DeleteByID(ctx, application.ID); err != nil {
-		c.l.Errorf("error deleting application %s: %v", application.ID.Hex(), err)
+	if err := c.deleteDeployment(ctx, app, user); err != nil {
 		return err
 	}
+
+	if err := c.deleteService(ctx, app, user); err != nil {
+		return err
+	}
+
+	if err := c.deleteIngressRoute(ctx, app, user); err != nil {
+		return err
+	}
+
+	if err := c.deletePersistantVolumeClmain(ctx, app, user); err != nil {
+		return err
+	}
+
+	if err := c.deleteConfigMap(ctx, app, user); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -231,5 +249,177 @@ func (c *Controller) FailedBuild(ctx context.Context, info *model.BuildResponse)
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (c *Controller) RedeployApplication(ctx context.Context, user *model.User, application *model.Application) error {
+	c.l.Infof("force restart of deployment %s (appID=%s) of user %s", application.Service.Deployment.Name, application.ID.Hex(), user.Code)
+	application.Service.Deployment.CurrentPodName = ""
+	if err := c.updateApplication(ctx, application); err != nil {
+		return err
+	}
+	if err := c.ServiceManager.RestartDeployment(ctx, user.Namespace, application.Service.Deployment.Name); err != nil {
+		c.l.Errorf("error restarting deployment %s: %v", application.Service.Deployment.Name, err)
+		return err
+	}
+	return nil
+}
+
+func (c *Controller) AddCurrentPodToApplication(ctx context.Context, applicationID primitive.ObjectID, podName string) {
+	go func() {
+		for {
+			app, err := c.ApplicationRepo.FindByID(ctx, applicationID)
+			if err != nil {
+				c.l.Errorf("error finding application by id: %v", err)
+				return
+			}
+			if app.Service == nil || app.Service.Deployment == nil {
+				c.l.Debugf("application still not fully created, waiting to add pod")
+				time.Sleep(50 * time.Millisecond)
+				continue
+			}
+			app.Service.Deployment.CurrentPodName = podName
+			if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+				c.l.Errorf("error updating application: %v", err)
+			}
+			c.l.Infof("pod %s is now the current pod for application %s", podName, applicationID.Hex())
+			return
+		}
+	}()
+}
+
+func (c *Controller) UpdateApplication(ctx context.Context, app *model.Application, user *model.User, name string, patchPort string, envs []model.KeyValue) error {
+	c.l.Debugf("updating application %s", app.ID.Hex())
+	fields := make(logrus.Fields)
+	fields["applicationID"] = app.ID.Hex()
+	fields["userID"] = user.Code
+	fields["action"] = "UpdateApplication"
+	hasSomethingChanged := false
+	if name != "" && app.Name != name {
+		hasSomethingChanged = true
+		fields["name"] = name
+		fields["oldName"] = app.Name
+		c.l.WithFields(fields).Info("user trying to change name, currently not implemented")
+		return ErrInvalidOperationInCurrentState
+		// switch app.Kind {
+		// case model.ApplicationKindWeb, model.ApplicationKindManagment:
+		// 	if c.IsNameAvailableSystemWide(ctx, name) {
+		// 		return ErrApplicationNameNotAvailable
+		// 	}
+		// 	c.ServiceManager.UpdateIngressRoute()
+		// case model.ApplicationKindStorage:
+		// 	return ErrInvalidOperationInCurrentState
+		// }
+		// app.Name = name
+	}
+
+	if patchPort != "" && app.ListeningPort != patchPort {
+		hasSomethingChanged = true
+		fields["port"] = patchPort
+		fields["oldPort"] = app.ListeningPort
+		port, err := strconv.Atoi(patchPort)
+		if err != nil {
+			c.l.WithFields(fields).Info("user trying to change port, invalid port")
+			return ErrInvalidPort
+		}
+		if port < 0 || port > 65535 {
+			c.l.WithFields(fields).Info("user trying to change port, invalid port")
+			return ErrInvalidPort
+		}
+		app.ListeningPort = patchPort
+		updatedService, err := c.ServiceManager.UpdateService(ctx, user.Namespace, app.Service.Name, int32(port))
+		if err != nil {
+			c.l.WithFields(fields).Errorf("error updating service: %v", err)
+			return err
+		}
+		updatedService.Deployment = app.Service.Deployment
+		updatedService.IngressRoute = app.Service.IngressRoute
+		app.Service = updatedService
+		c.l.WithFields(fields).Debugf("service %s updated succesfully with new port", app.Service.Name)
+	}
+
+	configMapName := ""
+	if envs != nil {
+		// fields["envs"]=
+		for _, env := range envs {
+			c.l.Debugf("env: %+v", env)
+			if env.Key == "" || env.Value == "" {
+				return ErrInvalidEnv
+			}
+		}
+		same := true
+		if len(envs) != len(app.Envs) {
+			same = false
+		} else {
+			oldEnvMap := convertModelKeyValueToMap(app.Envs)
+			newEnvMap := convertModelKeyValueToMap(envs)
+			for key, value := range oldEnvMap {
+				if newEnvMap[key] != value {
+					same = false
+					break
+				}
+			}
+		}
+		if same {
+			c.l.WithFields(fields).Info("user trying to update envs, but they are the same")
+		} else {
+			hasSomethingChanged = true
+			app.Envs = envs
+			if app.Service.Deployment.ConfigMap != nil {
+				updatedConfigMap, err := c.ServiceManager.UpdateConfigMap(ctx, user.Namespace, app.Service.Deployment.ConfigMap.Name, envs)
+				if err != nil {
+					c.l.WithFields(fields).Errorf("error updating config map %s: %v", app.Service.Deployment.ConfigMap.Name, err)
+					return err
+				}
+				app.Service.Deployment.ConfigMap = updatedConfigMap
+				c.l.WithFields(fields).Debugf("configMap %s updated succesfully", app.Service.Deployment.ConfigMap.Name)
+			} else {
+				configMap, err := c.createConfigMap(ctx, app, user, envs)
+				if err != nil {
+					c.l.WithFields(fields).Errorf("error creating config map: %v", err)
+					return err
+				}
+				app.Service.Deployment.ConfigMap = configMap
+				c.l.WithFields(fields).Debugf("configMap %s created succesfully", configMap.Name)
+			}
+			configMapName = app.Service.Deployment.ConfigMap.Name
+		}
+	}
+
+	if !hasSomethingChanged{
+		return ErrNoChanges
+	} 
+
+	updatedDeployment, err := c.ServiceManager.UpdateDeployment(
+		ctx,
+		user.Namespace,
+		app.Service.Deployment.Name,
+		app.Service.Deployment.ImageRegistry,
+		app.Service.Deployment.Replicas,
+		app.Service.Deployment.Port,
+		app.Service.Deployment.Labels,
+		configMapName)
+	if err != nil {
+		c.l.WithFields(fields).Errorf("error updating deployment %s: %v", app.Service.Deployment.Name, err)
+		return err
+	}
+	c.l.WithFields(fields).Debugf("deployment %s updated succesfully", app.Service.Deployment.Name)
+	if configMapName != "" {
+		updatedDeployment.ConfigMap = app.Service.Deployment.ConfigMap
+	}
+	updatedDeployment.Volume = app.Service.Deployment.Volume
+	app.Service.Deployment = updatedDeployment
+
+	//redeploy application
+	c.l.WithFields(fields).Debugf("redeploy application to apply changes")
+	if err := c.RedeployApplication(ctx, user, app); err != nil {
+		c.l.WithFields(fields).Errorf("error redeploy application during update")
+		return err
+	}
+
+	if err := c.updateApplication(ctx, app); err != nil {
+		return err
+	}
+	c.l.WithFields(fields).Infof("application updated succesfully")
 	return nil
 }
