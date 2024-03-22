@@ -12,11 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
-func (k K8sOrchestratedServiceManager) GetDeployment(ctx context.Context, namespace, deploymentName string) (*model.Deployment, error) {
-	deployment, err := k.clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("error getting deployment: %v", err)
-	}
+func convertK8sDeploymentToModelDeployment(deployment *appsv1.Deployment) *model.Deployment {
 	return &model.Deployment{
 		BaseResource: model.BaseResource{
 			Name:      deployment.Name,
@@ -28,11 +24,20 @@ func (k K8sOrchestratedServiceManager) GetDeployment(ctx context.Context, namesp
 		CpuLimits:     deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String(),
 		MemoryLimits:  deployment.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String(),
 		Port:          deployment.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort,
-	}, nil
+	}
+}
+
+func (k K8sOrchestratedServiceManager) GetDeployment(ctx context.Context, namespace, deploymentName string) (*model.Deployment, error) {
+	deployment, err := k.clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error getting deployment: %v", err)
+	}
+
+	return convertK8sDeploymentToModelDeployment(deployment), nil
 }
 
 func (k K8sOrchestratedServiceManager) CreateNewDeployment(ctx context.Context, namespace, deploymentName, app, imageRegistry string, replicas, port int32, labels []model.KeyValue, configMapName string, volume *model.Volume) (*model.Deployment, error) {
-	k8sLabels := convertModelKeyValuesToLables(labels)
+	k8sLabels := convertModelDataToK8sData(labels)
 	if k8sLabels[model.AppLabel] == "" {
 		k8sLabels[model.AppLabel] = app
 	}
@@ -103,34 +108,45 @@ func (k K8sOrchestratedServiceManager) CreateNewDeployment(ctx context.Context, 
 		}
 	}
 
-	_, err := k.clientset.AppsV1().Deployments(namespace).
+	createdDeployment, err := k.clientset.AppsV1().Deployments(namespace).
 		Create(ctx, deployment, metav1.CreateOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error creating deployment: %v", err)
 	}
 
-	return &model.Deployment{
-		BaseResource: model.BaseResource{
-			Name:      deploymentName,
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Replicas:      replicas,
-		ImageRegistry: imageRegistry,
-		CpuLimits:     k.cpuResource.String(),
-		MemoryLimits:  k.memoryResource.String(),
-		Volume:        volume,
-		Port:          port,
-	}, nil
+	return convertK8sDeploymentToModelDeployment(createdDeployment), nil
 }
 
-func (k K8sOrchestratedServiceManager) RestartDeployment(ctx context.Context, namespace string, deploymentName string) error {
-	_, err := k.clientset.AppsV1().Deployments(namespace).Patch(ctx,
-		deploymentName, types.MergePatchType, []byte(`{"spec":{"template":{"metadata":{"annotations":{"date":"`+metav1.Now().String()+`"}}}}}`), metav1.PatchOptions{})
+func (k K8sOrchestratedServiceManager) UpdateDeployment(ctx context.Context, namespace, deploymentName string, imageRegistry string, replicas, port int32, labels []model.KeyValue, configMapName string) (*model.Deployment, error) {
+	deployment, err := k.clientset.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("error restarting deployment: %v", err)
+		return nil, fmt.Errorf("error getting deployment: %v", err)
 	}
-	return nil
+
+	deployment.Spec.Replicas = &replicas
+	deployment.Spec.Template.Spec.Containers[0].Image = imageRegistry
+	deployment.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort = port
+	if configMapName != "" {
+		deployment.Spec.Template.Spec.Containers[0].EnvFrom = []corev1.EnvFromSource{
+			{
+				ConfigMapRef: &corev1.ConfigMapEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: configMapName,
+					},
+				},
+			}}
+	}
+
+	k8sLabels := convertModelDataToK8sData(labels)
+	deployment.Labels = k8sLabels
+	deployment.Spec.Template.Labels = k8sLabels
+
+	updatedDeployment, err := k.clientset.AppsV1().Deployments(namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error updating deployment: %v", err)
+	}
+
+	return convertK8sDeploymentToModelDeployment(updatedDeployment), nil
 }
 
 func (k K8sOrchestratedServiceManager) DeleteDeployment(ctx context.Context, namespace, deploymentName string, gracePeriod int64) error {
@@ -143,6 +159,15 @@ func (k K8sOrchestratedServiceManager) DeleteDeployment(ctx context.Context, nam
 	})
 	if err != nil {
 		return fmt.Errorf("error deleting deployment: %v", err)
+	}
+	return nil
+}
+
+func (k K8sOrchestratedServiceManager) RestartDeployment(ctx context.Context, namespace string, deploymentName string) error {
+	_, err := k.clientset.AppsV1().Deployments(namespace).Patch(ctx,
+		deploymentName, types.MergePatchType, []byte(`{"spec":{"template":{"metadata":{"annotations":{"date":"`+metav1.Now().String()+`"}}}}}`), metav1.PatchOptions{})
+	if err != nil {
+		return fmt.Errorf("error restarting deployment: %v", err)
 	}
 	return nil
 }

@@ -54,4 +54,3 @@ func NewK8sOrchestratedServiceManager(kubeConfigPath, cpuResource, memoryResourc
 		memoryResource: memoryQuantity,
 	}, nil
 }
-

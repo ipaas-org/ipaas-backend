@@ -10,37 +10,35 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
+func convertKubeNamespaceToModelBaseResource(ns *v1.Namespace) *model.BaseResource {
+	return &model.BaseResource{
+		Name:      ns.Name,
+		Namespace: ns.Namespace,
+		Labels:    convertK8sDataToModelData(ns.Labels),
+	}
+}
+
 func (k K8sOrchestratedServiceManager) GetNamespace(ctx context.Context, namespace string) (*model.BaseResource, error) {
 	ns, err := k.clientset.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error getting namespace: %v", err)
 	}
-	return &model.BaseResource{
-		Name:      ns.Name,
-		Namespace: ns.Namespace,
-		Labels:    convertK8sDataToModelData(ns.Labels),
-	}, nil
+	return convertKubeNamespaceToModelBaseResource(ns), nil
 }
 
-func (k K8sOrchestratedServiceManager) CreateNewNamespace(ctx context.Context, namespace string, labels []model.KeyValue) error {
-	k8sLabels := convertModelKeyValuesToLables(labels)
-	_, err := k.clientset.CoreV1().Namespaces().Create(ctx,
+func (k K8sOrchestratedServiceManager) CreateNewNamespace(ctx context.Context, namespace string, labels []model.KeyValue) (*model.BaseResource, error) {
+	k8sLabels := convertModelDataToK8sData(labels)
+	ns, err := k.clientset.CoreV1().Namespaces().Create(ctx,
 		&v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   namespace,
 				Labels: k8sLabels,
-				// Labels: map[string]string{
-				// 	ownerLabel:        owner,
-				// 	environmentLabel:  environment,
-				// 	ipaasVersionLabel: k.appVersion,
-				// 	ipaasManagedLabel: "true",
-				// },
 			},
 		}, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("error creating namespace: %v", err)
+		return nil, fmt.Errorf("error creating namespace: %v", err)
 	}
-	return nil
+	return convertKubeNamespaceToModelBaseResource(ns), err
 }
 
 func (k K8sOrchestratedServiceManager) DeleteNamespace(ctx context.Context, namespace string, gracePeriod int64) error {

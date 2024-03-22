@@ -37,7 +37,7 @@ func TestCreateNewNamespace(t *testing.T) {
 	manager := getTestK8sManager()
 	namespace := "test-namespace"
 	ctx := context.Background()
-	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
+	_, err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
 		t.Errorf("error creating namespace: %v\n", err)
 	}
@@ -55,7 +55,7 @@ func TestCreateConfigMap(t *testing.T) {
 	namespace := "test-namespace"
 	configMapName := "test-configmap"
 	ctx := context.Background()
-	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
+	_, err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
 		t.Errorf("error creating namespace: %v\n", err)
 	}
@@ -95,7 +95,7 @@ func TestCreateNewDeployment(t *testing.T) {
 	namespace := "test-namespace"
 	// realImage := "registry.cargoway.cloud/us-60ff775c-4915-4523-bf91-ccb63874d95d/65e8ab54c3086ba65b91cb16:22e7f5b80c0e537a72d09dae4de7ab245c5ac8f9"
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
+	_, err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
 		t.Fatalf("error creating namespace: %v\n", err)
 	}
@@ -159,7 +159,7 @@ func TestRestartDeployment(t *testing.T) {
 	manager := getTestK8sManager()
 	namespace := "test-namespace"
 	ctx := context.Background()
-	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
+	_, err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
 		t.Errorf("error creating namespace: %v\n", err)
 	}
@@ -222,7 +222,7 @@ loop:
 				t.Log("done chan is closed, either context was cancelled or something worst O-O")
 			} else {
 				t.Log("found stuff")
-				err := manager.CreateNewNamespace(ctx, namespace, namespaceLabels)
+				_, err := manager.CreateNewNamespace(ctx, namespace, namespaceLabels)
 				if err != nil {
 					t.Error("incorrect behaviour of delete namespace:", err)
 				}
@@ -242,7 +242,7 @@ func TestFullApplicationStartup(t *testing.T) {
 		Key:   model.ResourceNameLabel,
 		Value: namespace,
 	})
-	err := manager.CreateNewNamespace(ctx, namespace, namespaceLabels)
+	_, err := manager.CreateNewNamespace(ctx, namespace, namespaceLabels)
 	if err != nil {
 		t.Errorf("error creating namespace: %v\n", err)
 	}
@@ -290,7 +290,7 @@ func TestNewServiceCreation(t *testing.T) {
 	manager := getTestK8sManager()
 	namespace := "test-namespace"
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
+	_, err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
 		t.Fatalf("error creating namespace: %v\n", err)
 	}

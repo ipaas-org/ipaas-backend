@@ -10,11 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (k K8sOrchestratedServiceManager) GetService(ctx context.Context, namespace, serviceName string) (*model.Service, error) {
-	service, err := k.clientset.CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("error getting service: %v", err)
-	}
+func convertKubeServiceToModelService(service *v1.Service) *model.Service {
 	return &model.Service{
 		BaseResource: model.BaseResource{
 			Name:      service.Name,
@@ -23,13 +19,20 @@ func (k K8sOrchestratedServiceManager) GetService(ctx context.Context, namespace
 		},
 		Port:       service.Spec.Ports[0].Port,
 		TargetPort: service.Spec.Ports[0].TargetPort.IntVal,
-	}, nil
+	}
+}
 
+func (k K8sOrchestratedServiceManager) GetService(ctx context.Context, namespace, serviceName string) (*model.Service, error) {
+	service, err := k.clientset.CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error getting service: %v", err)
+	}
+	return convertKubeServiceToModelService(service), nil
 }
 
 func (k K8sOrchestratedServiceManager) CreateNewService(ctx context.Context, namespace, serviceName, app string, port int32, labels []model.KeyValue) (*model.Service, error) {
-	k8sLabels := convertModelKeyValuesToLables(labels)
-	_, err := k.clientset.CoreV1().Services(namespace).
+	k8sLabels := convertModelDataToK8sData(labels)
+	service, err := k.clientset.CoreV1().Services(namespace).
 		Create(ctx,
 			&v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -55,32 +58,24 @@ func (k K8sOrchestratedServiceManager) CreateNewService(ctx context.Context, nam
 	if err != nil {
 		return nil, fmt.Errorf("error creating deployment: %v", err)
 	}
-	return &model.Service{
-		BaseResource: model.BaseResource{
-			Name:      serviceName,
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Port:       port,
-		TargetPort: port,
-	}, nil
+	return convertKubeServiceToModelService(service), nil
 }
 
-func (k K8sOrchestratedServiceManager) UpdateService(ctx context.Context, namespace, serviceName string, port int32) error {
+func (k K8sOrchestratedServiceManager) UpdateService(ctx context.Context, namespace, serviceName string, port int32) (*model.Service, error) {
 	service, err := k.clientset.CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("error getting service: %v", err)
+		return nil, fmt.Errorf("error getting service: %v", err)
 	}
 	service.Spec.Ports[0].Port = port
 	service.Spec.Ports[0].TargetPort = intstr.IntOrString{
 		Type:   intstr.Int,
 		IntVal: port,
 	}
-	_, err = k.clientset.CoreV1().Services(namespace).Update(ctx, service, metav1.UpdateOptions{})
+	newService, err := k.clientset.CoreV1().Services(namespace).Update(ctx, service, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("error updating service: %v", err)
+		return nil, fmt.Errorf("error updating service: %v", err)
 	}
-	return nil
+	return convertKubeServiceToModelService(newService), nil
 }
 
 func (k K8sOrchestratedServiceManager) DeleteService(ctx context.Context, namespace, serviceName string, gracePeriod int64) error {

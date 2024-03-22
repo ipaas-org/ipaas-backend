@@ -10,14 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (k K8sOrchestratedServiceManager) GetIngressRoute(ctx context.Context, namespace, ingressRouteName string) (*model.IngressRoute, error) {
-	ingressRoute, err := k.traefikClient.
-		TraefikV1alpha1().
-		IngressRoutes(namespace).
-		Get(ctx, ingressRouteName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("error getting ingress route: %v", err)
-	}
+func convertK8sIngressRouteToModelIngressRoute(ingressRoute *traefikv1alpha1.IngressRoute) *model.IngressRoute {
 	return &model.IngressRoute{
 		BaseResource: model.BaseResource{
 			Name:      ingressRoute.Name,
@@ -26,13 +19,24 @@ func (k K8sOrchestratedServiceManager) GetIngressRoute(ctx context.Context, name
 		},
 		Entrypoints: ingressRoute.Spec.EntryPoints,
 		Domain:      ingressRoute.Spec.Routes[0].Match,
-	}, nil
+	}
+}
+
+func (k K8sOrchestratedServiceManager) GetIngressRoute(ctx context.Context, namespace, ingressRouteName string) (*model.IngressRoute, error) {
+	ingressRoute, err := k.traefikClient.
+		TraefikV1alpha1().
+		IngressRoutes(namespace).
+		Get(ctx, ingressRouteName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error getting ingress route: %v", err)
+	}
+	return convertK8sIngressRouteToModelIngressRoute(ingressRoute), nil
 }
 
 func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, host, serviceName string, listeningPort int32, labels []model.KeyValue) (*model.IngressRoute, error) {
-	k8sLables := convertModelKeyValuesToLables(labels)
+	k8sLables := convertModelDataToK8sData(labels)
 	entrypoints := []string{"web", "websecure"}
-	_, err := k.traefikClient.
+	ingressRoute, err := k.traefikClient.
 		TraefikV1alpha1().
 		IngressRoutes(namespace).
 		Create(ctx,
@@ -68,24 +72,16 @@ func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context
 	if err != nil {
 		return nil, fmt.Errorf("error creating ingress route: %v", err)
 	}
-	return &model.IngressRoute{
-		BaseResource: model.BaseResource{
-			Name:      ingressRouteName,
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Entrypoints: entrypoints,
-		Domain:      host,
-	}, nil
+	return convertK8sIngressRouteToModelIngressRoute(ingressRoute), nil
 }
 
-func (k K8sOrchestratedServiceManager) UpdateIngressRoute(ctx context.Context, namespace, ingressRouteName, newHost string) error {
+func (k K8sOrchestratedServiceManager) UpdateIngressRoute(ctx context.Context, namespace, ingressRouteName, newHost string) (*model.IngressRoute, error) {
 	ingressRoute, err := k.traefikClient.
 		TraefikV1alpha1().
 		IngressRoutes(namespace).
 		Get(ctx, ingressRouteName, metav1.GetOptions{})
 	if err != nil {
-		return fmt.Errorf("error getting ingress route: %v", err)
+		return nil, fmt.Errorf("error getting ingress route: %v", err)
 	}
 	ingressRoute.Spec.Routes[0].Match = fmt.Sprintf("Host(`%s`)", newHost)
 	_, err = k.traefikClient.
@@ -93,9 +89,9 @@ func (k K8sOrchestratedServiceManager) UpdateIngressRoute(ctx context.Context, n
 		IngressRoutes(namespace).
 		Update(ctx, ingressRoute, metav1.UpdateOptions{})
 	if err != nil {
-		return fmt.Errorf("error updating ingress route: %v", err)
+		return nil, fmt.Errorf("error updating ingress route: %v", err)
 	}
-	return nil
+	return convertK8sIngressRouteToModelIngressRoute(ingressRoute), nil
 }
 
 func (k K8sOrchestratedServiceManager) DeleteIngressRoute(ctx context.Context, namespace, ingressRouteName string, gracePeriod int64) error {
