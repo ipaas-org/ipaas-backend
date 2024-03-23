@@ -29,7 +29,6 @@ func NewK8sOrchestratedServiceManager(kubeConfigPath, cpuResource, memoryResourc
 		if err != nil {
 			return nil, fmt.Errorf("fail to build the k8s config. Error - %s", err)
 		}
-
 	} else {
 		config, err = clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 		if err != nil {
