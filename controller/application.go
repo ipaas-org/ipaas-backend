@@ -220,17 +220,25 @@ func (c *Controller) DeleteApplication(ctx context.Context, app *model.Applicati
 		return ErrInvalidOperationInCurrentState
 	}
 
+	if app.Service == nil {
+		c.l.Warnf("user trying to delete application %s without service, this might cause an error with image builder", app.ID.Hex())
+		if _, err := c.ApplicationRepo.DeleteByID(ctx, app.ID); err != nil {
+			c.l.Errorf("error deleting application: %v", err)
+			return err
+		}
+	}
+
 	app.State = model.ApplicationStateDeleting
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 		c.l.Errorf("error updating application: %v", err)
 		return err
 	}
 
-	if err := c.deleteDeployment(ctx, app, user); err != nil {
+	if err := c.deleteService(ctx, app, user); err != nil {
 		return err
 	}
 
-	if err := c.deleteService(ctx, app, user); err != nil {
+	if err := c.deleteDeployment(ctx, app, user); err != nil {
 		return err
 	}
 
