@@ -104,11 +104,11 @@ func (c *Controller) StoreTokensGenerateRedirectUri(ctx context.Context, jwt *mo
 func (c *Controller) GetTokensFromKeyAndDeleteKey(ctx context.Context, key string) (*model.AccessToken, *model.RefreshToken, error) {
 	jwt, refresh, err := c.TempTokenRepo.FindByKey(ctx, key)
 	if err != nil {
-		c.l.Errorf("error getting tokens from temp storage")
+		c.l.Errorf("error getting tokens from temp storage: %v", err)
 		return nil, nil, err
 	}
 	if err := c.TempTokenRepo.DeleteKey(ctx, key); err != nil {
-		c.l.Errorf("error deleting key from temp storage")
+		c.l.Errorf("error deleting key from temp storage: %v", err)
 		return nil, nil, err
 	}
 	return jwt, refresh, nil
