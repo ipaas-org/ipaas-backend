@@ -48,7 +48,7 @@ func StartContainerEventHandler(ctx context.Context, c *ContainerEventHandler, I
 		if r := recover(); r != nil {
 			c.l.Errorf("container event handler panic, recovering: \nerror: %v\n\nstack: %s", r, string(debug.Stack()))
 		}
-		if ctx.Err() != nil {
+		if ctx.Err() == nil {
 			RoutineMonitor <- ID
 		} else {
 			c.l.Info("ContainerEventHandler not restarting, context was canceled")
@@ -147,6 +147,14 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 			}
 
 			if state.Terminated != nil {
+				if app.State == model.ApplicationStateStarting {
+					c.l.Infof("container %s is terminated, but application is still starting, there is a possible CrashLoopBackOff", pod.Name)
+					app.State = model.ApplicationStateFailed
+					if _, err := c.controller.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+						c.l.Errorf("error updating application: %v", err)
+					}
+					continue
+				}
 				if app.Service.Deployment.CurrentPodName != pod.Name {
 					c.l.Warnf("application %s has a terminated container %s, but it's not the one we're watching %s, ignoring", app.Name, pod.Name, app.Service.Deployment.CurrentPodName)
 					continue
