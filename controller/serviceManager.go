@@ -29,10 +29,14 @@ func (c *Controller) getDefaultLabels(owner, environment, app, appID, resourceNa
 	return labels
 }
 
+func (c *Controller) filledDefaultLabels(user *model.User, app *model.Application, resourceName string) []model.KeyValue {
+	return c.getDefaultLabels(user.Code, staticTempEnvironment, app.Name+"-"+app.ID.Hex(), app.ID.Hex(), resourceName)
+}
+
 func (c *Controller) createConfigMap(ctx context.Context, app *model.Application, user *model.User, envs []model.KeyValue) (*model.ConfigMap, error) {
 	c.l.Debugf("creating config map for application %s", app.Name)
 	resourceName := fmt.Sprintf("cm-%s", app.Name)
-	configMapLabels := c.getDefaultLabels(user.Code, staticTempEnvironment, app.Name, app.ID.Hex(), resourceName)
+	configMapLabels := c.filledDefaultLabels(user, app, resourceName)
 	configMap, err := c.ServiceManager.CreateNewConfigMap(ctx, user.Namespace, resourceName, envs, configMapLabels)
 	if err != nil {
 		c.l.Errorf("error creating config map: %v", err)
@@ -44,8 +48,9 @@ func (c *Controller) createConfigMap(ctx context.Context, app *model.Application
 
 func (c *Controller) createDeployment(ctx context.Context, app *model.Application, user *model.User, registryImage, configMapName string, volume *model.Volume) (*model.Deployment, error) {
 	c.l.Debugf("creating deployment for application %s", app.Name)
-	resourceName := fmt.Sprintf("deploy-%s", app.Name)
-	deploymentLabels := c.getDefaultLabels(user.Code, staticTempEnvironment, app.Name, app.ID.Hex(), resourceName)
+	appName := fmt.Sprintf("%s-%s", app.Name, app.ID.Hex())
+	resourceName := fmt.Sprintf("deploy-%s", appName)
+	deploymentLabels := c.filledDefaultLabels(user, app, resourceName)
 	deploymentLabels = append(deploymentLabels,
 		[]model.KeyValue{
 			{
@@ -61,7 +66,7 @@ func (c *Controller) createDeployment(ctx context.Context, app *model.Applicatio
 		return nil, err
 	}
 	intPort := int32(p)
-	deployment, err := c.ServiceManager.CreateNewDeployment(ctx, user.Namespace, resourceName, app.Name, registryImage, 1, intPort, deploymentLabels, configMapName, volume)
+	deployment, err := c.ServiceManager.CreateNewDeployment(ctx, user.Namespace, resourceName, appName, registryImage, 1, intPort, deploymentLabels, configMapName, volume)
 	if err != nil {
 		c.l.Errorf("error creating deployment: %v", err)
 		return nil, err
@@ -73,15 +78,16 @@ func (c *Controller) createDeployment(ctx context.Context, app *model.Applicatio
 func (c *Controller) createService(ctx context.Context, app *model.Application, user *model.User) (*model.Service, error) {
 	c.l.Debugf("creating service for application %s", app.Name)
 	// resourceName := fmt.Sprintf("svc-%s", app.Name)
+	appName := fmt.Sprintf("%s-%s", app.Name, app.ID.Hex())
 	resourceName := app.Name
-	serviceLabels := c.getDefaultLabels(user.Code, staticTempEnvironment, app.Name, app.ID.Hex(), resourceName)
+	serviceLabels := c.filledDefaultLabels(user, app, resourceName)
 	p, err := strconv.Atoi(app.ListeningPort)
 	if err != nil {
 		c.l.Errorf("error converting port to int: %v", err)
 		return nil, err
 	}
 	intPort := int32(p)
-	service, err := c.ServiceManager.CreateNewService(ctx, user.Namespace, resourceName, app.Name, intPort, serviceLabels)
+	service, err := c.ServiceManager.CreateNewService(ctx, user.Namespace, resourceName, appName, intPort, serviceLabels)
 	if err != nil {
 		c.l.Errorf("error creating service: %v", err)
 		return nil, err
@@ -93,7 +99,7 @@ func (c *Controller) createService(ctx context.Context, app *model.Application, 
 func (c *Controller) createIngressRoute(ctx context.Context, app *model.Application, user *model.User, host, serviceName string, listeningPort int32) (*model.IngressRoute, error) {
 	c.l.Debugf("creating ingress route for application %s", app.Name)
 	resourceName := fmt.Sprintf("ir-%s", app.Name)
-	ingressRouteLabels := c.getDefaultLabels(user.Code, staticTempEnvironment, app.Name, app.ID.Hex(), resourceName)
+	ingressRouteLabels := c.filledDefaultLabels(user, app, resourceName)
 	// host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
 	ingressRoute, err := c.ServiceManager.CreateNewIngressRoute(ctx, user.Namespace, resourceName, host, serviceName, listeningPort, ingressRouteLabels)
 	if err != nil {
@@ -107,7 +113,7 @@ func (c *Controller) createIngressRoute(ctx context.Context, app *model.Applicat
 func (c *Controller) createPersistantVolumeClaim(ctx context.Context, app *model.Application, user *model.User, storageClass string, GiSize int64) (*model.PersistentVolumeClaim, error) {
 	c.l.Debugf("creating persistant volume claim for application %s", app.Name)
 	pvcName := fmt.Sprintf("pvc-%s", app.Name)
-	pvcLabels := c.getDefaultLabels(user.Code, staticTempEnvironment, app.Name, app.ID.Hex(), pvcName)
+	pvcLabels := c.filledDefaultLabels(user, app, pvcName)
 	pvc, err := c.ServiceManager.CreateNewPersistentVolumeClaim(ctx, user.Namespace, pvcName, storageClass, GiSize, pvcLabels)
 	if err != nil {
 		c.l.Errorf("error creating persistant volume claim: %v", err)

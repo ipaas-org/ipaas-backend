@@ -103,74 +103,75 @@ func (c *Controller) createNewStorageKindService(ctx context.Context, template *
 		return err
 	}
 
-	configMap, err := c.createConfigMap(ctx, app, user, app.Envs)
-	if err != nil {
-		return err
-	}
-
-	GiSize := int64(1 * 1024 * 1024 * 1024) // 1Gi
-	storageClass := "longhorn-test"
-	pvc, err := c.createPersistantVolumeClaim(ctx, app, user, storageClass, GiSize)
-	if err != nil {
-		return err
-	}
-	volume := new(model.Volume)
-	volume.Name = fmt.Sprintf("vol-%s", app.Name)
-	volume.MountPath = template.PersistancePath
-	volume.PersistantVolumeClaim = pvc
-
-	deployment, err := c.createDeployment(ctx, app, user, template.ImageName, configMap.Name, volume)
-	if err != nil {
-		return err
-	}
-	deployment.ConfigMap = configMap
-
-	//watch for deployment ready state, it's non blocking so we just check at the end
-	done, errChan := c.ServiceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
-	var errWhileWaiting error
-loop:
-	for {
-		select {
-		case err := <-errChan:
-			c.l.Errorf("error while waiting for deployment: %v", err)
-			errWhileWaiting = err
-			break loop
-		case _, ok := <-done:
-			if !ok {
-				//todo: choose what to do in this case
-				c.l.Errorf("done chan is closed, either context was cancelled or something worst O-O")
-				if ctx.Err() != nil {
-					c.l.Errorf("context cancelled while a deployment was being created, no further changes will be done at the moment")
-				} else {
-					errWhileWaiting = fmt.Errorf("internal error")
-				}
-			} else {
-				c.l.Debugf("deployment %s is available", deployment.Name)
-			}
-			break loop
+	go func() {
+		configMap, err := c.createConfigMap(ctx, app, user, app.Envs)
+		if err != nil {
+			c.l.Errorf("error creating config map for service %v:", err)
 		}
-	}
 
-	service, err := c.createService(ctx, app, user)
-	if err != nil {
-		return err
-	}
-	service.Deployment = deployment
+		GiSize := int64(1 * 1024 * 1024 * 1024) // 1Gi
+		storageClass := "longhorn-test"
+		pvc, err := c.createPersistantVolumeClaim(ctx, app, user, storageClass, GiSize)
+		if err != nil {
+			c.l.Errorf("error creating PVC for service %v:", err)
+		}
+		volume := new(model.Volume)
+		volume.Name = fmt.Sprintf("vol-%s", app.Name)
+		volume.MountPath = template.PersistancePath
+		volume.PersistantVolumeClaim = pvc
 
-	if errWhileWaiting != nil {
-		//todo: handle waiting error, it's probably because it reached a timeout
-		//in this case it probably means that we reached a cpu/mem cap and we should
-		//expand the infra, it should really not happen
-		c.l.Errorf("internal error reached, this should not happen, check infrastructure resources left")
-		app.State = model.ApplicationStateFailed
-	} else {
-		app.State = model.ApplicationStateRunning
-		app.Service = service
-	}
-	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-		c.l.Errorf("error updating application: %v", err)
-		return err
-	}
+		deployment, err := c.createDeployment(ctx, app, user, template.ImageName, configMap.Name, volume)
+		if err != nil {
+			c.l.Errorf("error creating deployment for service %v:", err)
+		}
+		deployment.ConfigMap = configMap
+
+		//watch for deployment ready state, it's non blocking so we just check at the end
+		done, errChan := c.ServiceManager.WaitDeploymentReadyState(ctx, user.Namespace, deployment.Name)
+		var errWhileWaiting error
+	loop:
+		for {
+			select {
+			case err := <-errChan:
+				c.l.Errorf("error while waiting for deployment: %v", err)
+				errWhileWaiting = err
+				break loop
+			case _, ok := <-done:
+				if !ok {
+					//todo: choose what to do in this case
+					c.l.Errorf("done chan is closed, either context was cancelled or something worst O-O")
+					if ctx.Err() != nil {
+						c.l.Errorf("context cancelled while a deployment was being created, no further changes will be done at the moment")
+					} else {
+						errWhileWaiting = fmt.Errorf("internal error")
+					}
+				} else {
+					c.l.Debugf("deployment %s is available", deployment.Name)
+				}
+				break loop
+			}
+		}
+
+		service, err := c.createService(ctx, app, user)
+		if err != nil {
+			c.l.Errorf("error creating svc for service %v:", err)
+		}
+		service.Deployment = deployment
+
+		if errWhileWaiting != nil {
+			//todo: handle waiting error, it's probably because it reached a timeout
+			//in this case it probably means that we reached a cpu/mem cap and we should
+			//expand the infra, it should really not happen
+			c.l.Errorf("internal error reached, this should not happen, check infrastructure resources left")
+			app.State = model.ApplicationStateFailed
+		} else {
+			app.State = model.ApplicationStateRunning
+			app.Service = service
+		}
+		if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+			c.l.Errorf("error updating application: %v", err)
+		}
+	}()
 
 	return nil
 }
