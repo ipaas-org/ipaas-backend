@@ -56,7 +56,7 @@ func (h *httpHandler) GetApplicationLogs(c echo.Context) error {
 			return respError(c, 400, "invalid X-Last-Log-Nano", fmt.Sprintf("unable to parse %q as a valid X-Last-Log-Nano, the format must follow the specific of RFC3339 Nano", lastLogNano), ErrInvalidXLastLogNano)
 		}
 
-		logs, err := h.controller.GetLogs(ctx, user.Namespace, app.Name, from, to)
+		logs, err := h.controller.GetLogs(ctx, user.Namespace, app.Service.Deployment.Name, from, to)
 		if err != nil {
 			return respError(c, 500, "unexpected error", "", ErrUnexpected)
 		}
@@ -67,7 +67,7 @@ func (h *httpHandler) GetApplicationLogs(c echo.Context) error {
 		return respSuccess(c, 200, "logs retreived successfully", logs)
 	}
 
-	logs, err := h.controller.GetLogs(ctx, user.Namespace, app.Name, from, to)
+	logs, err := h.controller.GetLogs(ctx, user.Namespace, app.Service.Deployment.Name, from, to)
 	if err != nil {
 		return respError(c, 500, "unexpected error", "", ErrUnexpected)
 	}
