@@ -15,7 +15,6 @@ import (
 func (k K8sOrchestratedServiceManager) CreateNewPersistentVolumeClaim(ctx context.Context, namespace, pvcName, storageClassName string, storageSize int64, labels []model.KeyValue) (*model.PersistentVolumeClaim, error) {
 	k8sLabels := convertModelDataToK8sData(labels)
 	storageQuantity := resource.NewQuantity(storageSize, resource.BinarySI)
-	fmt.Printf("resource %v\n", *storageQuantity)
 	pvc, err := k.clientset.CoreV1().PersistentVolumeClaims(namespace).
 		Create(ctx,
 			&corev1.PersistentVolumeClaim{
