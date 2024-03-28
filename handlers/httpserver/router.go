@@ -43,7 +43,7 @@ func InitRouter(e *echo.Echo, l *logrus.Logger, controller *controller.Controlle
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		Skipper:      middleware.DefaultSkipper,
 		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 	}))
 
 	echo.NotFoundHandler = func(c echo.Context) error {
