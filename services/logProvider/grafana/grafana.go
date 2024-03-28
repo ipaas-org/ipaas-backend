@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -170,6 +171,9 @@ func (g *GrafanaLogProvider) retriveLogContents(body string) []model.LogContent 
 		logs[i].Content = contents[size-1-i].String()
 		logs[i].Timestamp = time.Unix(0, tsNano[size-1-i].Int())
 	}
+	sort.Slice(logs, func(i, j int) bool {
+		return logs[i].Timestamp.Before(logs[j].Timestamp)
+	})
 	return logs
 }
 
