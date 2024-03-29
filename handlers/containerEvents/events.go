@@ -107,11 +107,16 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 				c.l.Errorf("error parsing app id to object id: %v", err)
 				continue
 			}
+			c.l.Debugf("app id: %s", appID)
+
 			app, err := c.controller.GetApplicationByID(ctx, appPrimitiveID)
 			if err != nil {
 				c.l.Errorf("error getting application by id: %v", err)
 				continue
 			}
+
+			c.l.Debugf("app %+v", app)
+			// c.l.Debugf("event %+v", event)
 
 			if state.Running != nil {
 				if app.Service == nil || app.Service.Deployment == nil {
@@ -153,6 +158,10 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 					if _, err := c.controller.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 						c.l.Errorf("error updating application: %v", err)
 					}
+					continue
+				}
+				if app.Service == nil || app.Service.Deployment == nil {
+					c.l.Warnf("application %s has no service or deployment, probably currently being created, ignoring", app.Name)
 					continue
 				}
 				if app.Service.Deployment.CurrentPodName != pod.Name {
@@ -206,6 +215,10 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 					c.l.Infof("container %s is in crash loop, deleting to reset restart counter", pod.Name)
 					if err := c.controller.ServiceManager.DeletePod(ctx, pod.Namespace, pod.Name); err != nil {
 						c.l.Errorf("error deleting pod: %v", err)
+						continue
+					}
+					if app.Service == nil || app.Service.Deployment == nil {
+						c.l.Warnf("application %s has no service or deployment, probably currently being created, ignoring", app.Name)
 						continue
 					}
 					app.Service.Deployment.CurrentPodName = ""
