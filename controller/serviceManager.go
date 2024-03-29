@@ -35,7 +35,7 @@ func (c *Controller) filledDefaultLabels(user *model.User, app *model.Applicatio
 
 func (c *Controller) createConfigMap(ctx context.Context, app *model.Application, user *model.User, envs []model.KeyValue) (*model.ConfigMap, error) {
 	c.l.Debugf("creating config map for application %s", app.Name)
-	resourceName := fmt.Sprintf("cm-%s", app.Name)
+	resourceName := fmt.Sprintf("cm-%s-%s", app.Name, app.ID.Hex())
 	configMapLabels := c.filledDefaultLabels(user, app, resourceName)
 	configMap, err := c.ServiceManager.CreateNewConfigMap(ctx, user.Namespace, resourceName, envs, configMapLabels)
 	if err != nil {
@@ -98,7 +98,7 @@ func (c *Controller) createService(ctx context.Context, app *model.Application, 
 
 func (c *Controller) createIngressRoute(ctx context.Context, app *model.Application, user *model.User, host, serviceName string, listeningPort int32) (*model.IngressRoute, error) {
 	c.l.Debugf("creating ingress route for application %s", app.Name)
-	resourceName := fmt.Sprintf("ir-%s", app.Name)
+	resourceName := fmt.Sprintf("ir-%s-%s", app.Name, app.ID.Hex())
 	ingressRouteLabels := c.filledDefaultLabels(user, app, resourceName)
 	// host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
 	ingressRoute, err := c.ServiceManager.CreateNewIngressRoute(ctx, user.Namespace, resourceName, host, serviceName, listeningPort, ingressRouteLabels)
@@ -112,7 +112,7 @@ func (c *Controller) createIngressRoute(ctx context.Context, app *model.Applicat
 
 func (c *Controller) createPersistantVolumeClaim(ctx context.Context, app *model.Application, user *model.User, storageClass string, GiSize int64) (*model.PersistentVolumeClaim, error) {
 	c.l.Debugf("creating persistant volume claim for application %s", app.Name)
-	pvcName := fmt.Sprintf("pvc-%s", app.Name)
+	pvcName := fmt.Sprintf("pvc-%s-%s", app.Name, app.ID.Hex())
 	pvcLabels := c.filledDefaultLabels(user, app, pvcName)
 	pvc, err := c.ServiceManager.CreateNewPersistentVolumeClaim(ctx, user.Namespace, pvcName, storageClass, GiSize, pvcLabels)
 	if err != nil {
