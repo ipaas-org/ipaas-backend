@@ -126,7 +126,7 @@ func (g *GrafanaLogProvider) GetLogs(ctx context.Context, namespace string, app 
 	logs := g.retriveLogContents(body)
 	logBlock.ReturnedLogs = len(logs)
 	logBlock.Content = logs
-	if logBlock.ReturnedLogs > 0 {
+	if len(logs) > 0 {
 		logBlock.LastTimestamp = logs[len(logs)-1].Timestamp
 	}
 	return logBlock, nil
