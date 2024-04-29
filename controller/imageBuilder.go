@@ -12,18 +12,20 @@ func (c *Controller) BuildImage(ctx context.Context, app *model.Application, pro
 		return ErrInvalidOperationInCurrentState
 	}
 
-	request := model.BuildRequest{
+	request := model.Request{
 		ApplicationID: app.ID.Hex(),
-		Token:         providerToken,
-		UserID:        app.Owner,
-		Type:          "repo",
-		Connector:     "github",
-		Repo:          app.GithubRepo,
-		Branch:        app.GithubBranch,
+		PullInfo: &model.PullInfoRequest{
+			Token:     providerToken,
+			UserID:    app.Owner,
+			Connector: "github",
+			Repo:      app.GithubRepo,
+			Branch:    app.GithubBranch,
+		},
+		BuildPlan: app.BuildConfig,
 	}
 
 	c.l.Debugf("sending to rmq: %+v ", request)
-	if err := c.imageBuilder.BuildImage(request); err != nil {
+	if err := c.imageBuilder.BuildImage(ctx, request); err != nil {
 		c.l.Errorf("error sending image to image builder: %v", err)
 		app.State = model.ApplicationStateFailed
 		if err := c.updateApplication(ctx, app); err != nil {

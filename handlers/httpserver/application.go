@@ -19,6 +19,8 @@ type (
 		Port        string           `json:"port"`
 		Description string           `json:"description,omitempty"`
 		Envs        []model.KeyValue `json:"envs,omitempty"`
+
+		BuildConfig *model.BuildConfig `json:"buildConfig"`
 	}
 
 	HttpWebApplicationPatch struct {
@@ -45,7 +47,7 @@ func (h *httpHandler) NewWebApplication(c echo.Context) error {
 		return respError(c, 400, "name taken", "name not available as it's already been taken", ErrNameTaken)
 	}
 
-	app, err := h.controller.CreateNewWebApplication(ctx, user.Code, user.Info.GithubAccessToken, post.Name, post.Repo, post.Branch, post.Port, post.Envs)
+	app, err := h.controller.CreateNewWebApplication(ctx, user.Code, user.Info.GithubAccessToken, post.Name, post.Repo, post.Branch, post.Port, post.Envs, post.BuildConfig)
 	if err != nil {
 		//TODO: handle error
 		return respError(c, 500, "unexpected error", "", ErrUnexpected)

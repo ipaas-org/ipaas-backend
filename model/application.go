@@ -34,11 +34,70 @@ type (
 		Service       *Service           `bson:"service" json:"-"`
 		Envs          []KeyValue         `bson:"envs" json:"envs"`
 		BasedOn       string             `bson:"basedOn" json:"basedOn"` //id of the template the application is based on
+		BuildConfig   *BuildConfig       `bson:"buildConfig" json:"buildConfig"`
+		BuildOutput   string             `bson:"buildOutput" json:"buildOutput"`
 		// Image          *Image             `bson:"image" json:"image,omitempty"`
 	}
+
+	// NewApplication struct {
+	// 	ID          primitive.ObjectID
+	// 	CreatedAt   time.Time
+	// 	UpdatedAt   time.Time
+	// 	Kind        ApplicationKind
+	// 	State       ApplicationState
+	// 	DnsName     string
+	// 	Owner       string
+	// 	Visibility  VisibilityKind
+	// 	IsUpdatable bool
+	// 	BasedOn     string
+	// 	Iterations  []Iteration
+	// }
+
+	// ApplicationSpec struct {
+	// 	BuildSpec BuildSpec
+	// }
+
+	// BuildSpec struct {
+	// 	Builder       BuilderKind
+	// 	RootDirectory string
+	// 	Conector      string
+	// 	Type          string // repo (only implemented atm), tag, release, ...
+	// 	Repo          string
+	// 	Plan
+	// }
+
+	// BuilderKind string
+
+	// VisibilityKind string
+
+	// BuildInfo struct {
+	// 	Builder       string //nixpack:version, docker, docker-compose
+	// 	RootDirectory string
+	// 	StartedAt     time.Time
+	// 	EndedAt       time.Time
+	// 	Status        BuildStatus
+	// 	Request       *BuildRequest
+	// 	Response      *BuildResponse
+	// }
+
+	// BuildStatus string
 )
 
 const (
+	// BuilderKindNixpack       BuilderKind = "nixpack"
+	// BuilderKindDocker        BuilderKind = "docker"
+	// BuilderKindDockerimage   BuilderKind = "dockerimage"
+	// BuilderKindDockercompose BuilderKind = "dockercompose"
+
+	// BuildStatusPending  BuildStatus = "pending"
+	// BuildStatusBuilding BuildStatus = "building"
+	// BuildStatusFailed   BuildStatus = "failed"
+	// BuildStatusSuccess  BuildStatus = "success"
+
+	// VisibilityKindPublic    VisibilityKind = "public"
+	// VisibilityKindProtected VisibilityKind = "protected"
+	// VisibilityKindPrivate   VisibilityKind = "private"
+
 	ApplicationKindWeb       ApplicationKind = "web"
 	ApplicationKindStorage   ApplicationKind = "storage"
 	ApplicationKindManagment ApplicationKind = "managment"
