@@ -29,12 +29,24 @@ func InitRouter(e *echo.Echo, l *logrus.Logger, controller *controller.Controlle
 		LogStatus:   true,
 		LogLatency:  true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			l.Infof("ip=%q method=%q uri=%q status=%d latency=%q",
-				v.RemoteIP,
-				v.Method,
-				v.URI,
-				v.Status,
-				v.Latency)
+			if v.Method == echo.OPTIONS {
+				return nil
+			}
+			l.
+				// WithFields(logrus.Fields{
+				// 	"ip":      v.RemoteIP,
+				// 	"method":  v.Method,
+				// 	"uri":     v.URI,
+				// 	"status":  v.Status,
+				// 	"latency": v.Latency,
+				// 	"api":     "httpserver",
+				// }).Info("request")
+				Infof("API REQUEST ip=%q method=%q uri=%q status=%d latency=%q",
+					v.RemoteIP,
+					v.Method,
+					v.URI,
+					v.Status,
+					v.Latency)
 			return nil
 		},
 	}))
