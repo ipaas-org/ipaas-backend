@@ -28,6 +28,7 @@ const (
 	ErrInvalidOperationInCurrentState  HttpErrorType = "invalid_operation_in_current_state"
 	ErrInvalidOperationWithCurrentKind HttpErrorType = "invalid_operation_with_current_kind"
 	ErrVersionUpToDate                 HttpErrorType = "version_up_to_date"
+	ErrInvalidApplicationState         HttpErrorType = "invalid_application_state"
 
 	//template related errors
 	ErrTemplateCodeNotFound          HttpErrorType = "template_code_not_found"
