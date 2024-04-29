@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"time"
 
 	"github.com/ipaas-org/ipaas-backend/controller"
 	"github.com/ipaas-org/ipaas-backend/model"
@@ -78,6 +79,11 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 
 		case event := <-c.watch.ResultChan():
 			//log.Println(event)
+			// c.l.Debugf("[EVENT] received %v event", event.Type)
+			if event.Type == watch.Bookmark {
+				c.l.Debugf("[EVENT] received bookmark event")
+				c.l.Debugf("event: %+v", event)
+			}
 			pod, ok := event.Object.(*corev1.Pod)
 			if !ok {
 				continue
@@ -154,7 +160,7 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 			if state.Terminated != nil {
 				if app.State == model.ApplicationStateStarting {
 					c.l.Infof("container %s is terminated, but application is still starting, there is a possible CrashLoopBackOff", pod.Name)
-					app.State = model.ApplicationStateFailed
+					app.State = model.ApplicationStateCrashed
 					if _, err := c.controller.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
 						c.l.Errorf("error updating application: %v", err)
 					}
@@ -213,24 +219,26 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 
 				case "CrashLoopBackOff":
 					c.l.Infof("container %s is in crash loop, deleting to reset restart counter", pod.Name)
-					if err := c.controller.ServiceManager.DeletePod(ctx, pod.Namespace, pod.Name); err != nil {
-						c.l.Errorf("error deleting pod: %v", err)
-						continue
-					}
-					if app.Service == nil || app.Service.Deployment == nil {
-						c.l.Warnf("application %s has no service or deployment, probably currently being created, ignoring", app.Name)
-						continue
-					}
-					app.Service.Deployment.CurrentPodName = ""
-					if _, err := c.controller.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
-						c.l.Errorf("error updating application: %v", err)
-						continue
-					}
+					c.l.Warnf("crashLoopBackOff, not restarting counter to not starve the cluster")
+					// if err := c.controller.ServiceManager.DeletePod(ctx, pod.Namespace, pod.Name); err != nil {
+					// 	c.l.Errorf("error deleting pod: %v", err)
+					// 	continue
+					// }
+					// if app.Service == nil || app.Service.Deployment == nil {
+					// 	c.l.Warnf("application %s has no service or deployment, probably currently being created, ignoring", app.Name)
+					// 	continue
+					// }
+					// app.Service.Deployment.CurrentPodName = ""
+					// if _, err := c.controller.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+					// 	c.l.Errorf("error updating application: %v", err)
+					// 	continue
+					// }
 
 				default:
 					c.l.Warnf("unknown way to handle waiting state %s for container %s", state.Waiting.Reason, pod.Name)
 				}
 			}
 		}
+		time.Sleep(50 * time.Millisecond)
 	}
 }
