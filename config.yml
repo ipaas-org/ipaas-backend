@@ -38,5 +38,5 @@ k8s:
   registryUrl: "registry.cargoway.cloud"
 
 logProvider:
-  provider: "mock"
+  provider: "grafana-loki"
   baseUrl: "http://localhost:8090"
