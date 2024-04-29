@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/repo"
 	"github.com/labstack/echo/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -37,6 +38,12 @@ func (h *httpHandler) GetApplicationLogs(c echo.Context) error {
 
 	if app.Owner != user.Code {
 		return respError(c, 404, "inexisting application id", fmt.Sprintf("the application with id=%s does not exists", applicationID.Hex()), ErrInexistingApplication)
+	}
+	if app.State == model.ApplicationStateFailed {
+		return respError(c, 400, "failed application", fmt.Sprintf("the application with id=%s is in failed state", applicationID.Hex()), ErrInvalidApplicationState)
+	}
+	if app.State == model.ApplicationStateStarting {
+		return respError(c, 400, "application is starting", fmt.Sprintf("the application with id=%s is still starting, try again later", applicationID.Hex()), ErrInvalidApplicationState)
 	}
 
 	//get from and to from query params
