@@ -54,7 +54,7 @@ type (
 	IngressRoute struct {
 		BaseResource
 		Entrypoints []string `bson:"entrypoints" json:"entrypoints"`
-		Domain      string   `bson:"domain" json:"domain"`
+		Match       string   `bson:"match" json:"match"`
 		// Service     *Service `bson:"service" json:"service"`
 	}
 

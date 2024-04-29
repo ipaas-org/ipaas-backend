@@ -101,7 +101,8 @@ func (c *Controller) createIngressRoute(ctx context.Context, app *model.Applicat
 	resourceName := fmt.Sprintf("ir-%s-%s", app.Name, app.ID.Hex())
 	ingressRouteLabels := c.filledDefaultLabels(user, app, resourceName)
 	// host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
-	ingressRoute, err := c.ServiceManager.CreateNewIngressRoute(ctx, user.Namespace, resourceName, host, serviceName, listeningPort, ingressRouteLabels)
+	match := fmt.Sprintf("Host(`%s`)", host)
+	ingressRoute, err := c.ServiceManager.CreateNewIngressRoute(ctx, user.Namespace, resourceName, match, serviceName, listeningPort, ingressRouteLabels)
 	if err != nil {
 		c.l.Errorf("error creating ingress route: %v", err)
 		return nil, err
@@ -124,6 +125,10 @@ func (c *Controller) createPersistantVolumeClaim(ctx context.Context, app *model
 }
 
 func (c *Controller) deleteDeployment(ctx context.Context, app *model.Application, user *model.User) error {
+	if app.Service == nil || app.Service.Deployment == nil {
+		c.l.Debug("trying to delete deployment from application without deployment")
+		return nil
+	}
 	c.l.Debugf("deleting deployment %s", app.Service.Deployment.Name)
 	if err := c.ServiceManager.DeleteDeployment(ctx, user.Namespace, app.Service.Deployment.Name, gracePeriod); err != nil {
 		c.l.Errorf("error deleting deployment %s: %v", app.Service.Deployment.Name, err)
@@ -134,6 +139,10 @@ func (c *Controller) deleteDeployment(ctx context.Context, app *model.Applicatio
 }
 
 func (c *Controller) deleteService(ctx context.Context, app *model.Application, user *model.User) error {
+	if app.Service == nil {
+		c.l.Debug("trying to delete service from application without service")
+		return nil
+	}
 	c.l.Debugf("deleting service %s", app.Service.Name)
 	if err := c.ServiceManager.DeleteService(ctx, user.Namespace, app.Service.Name, gracePeriod); err != nil {
 		c.l.Errorf("error deleting service %s: %v", app.Service.Name, err)
@@ -144,7 +153,7 @@ func (c *Controller) deleteService(ctx context.Context, app *model.Application, 
 }
 
 func (c *Controller) deleteIngressRoute(ctx context.Context, app *model.Application, user *model.User) error {
-	if app.Service.IngressRoute == nil {
+	if app.Service == nil || app.Service.IngressRoute == nil {
 		c.l.Debug("trying to delete ingressRoute from application without ingressRoute")
 		return nil
 	}
@@ -158,7 +167,7 @@ func (c *Controller) deleteIngressRoute(ctx context.Context, app *model.Applicat
 }
 
 func (c *Controller) deleteConfigMap(ctx context.Context, app *model.Application, user *model.User) error {
-	if app.Service.Deployment.ConfigMap == nil {
+	if app.Service == nil || app.Service.Deployment == nil || app.Service.Deployment.ConfigMap == nil {
 		c.l.Debugf("trying to delete config map from application without a config map")
 		return nil
 	}
@@ -172,7 +181,7 @@ func (c *Controller) deleteConfigMap(ctx context.Context, app *model.Application
 }
 
 func (c *Controller) deletePersistantVolumeClmain(ctx context.Context, app *model.Application, user *model.User) error {
-	if app.Service.Deployment.Volume == nil {
+	if app.Service == nil || app.Service.Deployment == nil || app.Service.Deployment.Volume == nil {
 		c.l.Debugf("trying to delete PVC from application without a PVC")
 		return nil
 	}

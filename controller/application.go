@@ -12,6 +12,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+func (c *Controller) GetApplicationDefaults(ctx context.Context, repo string) {
+
+}
+
 func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string) bool {
 	_, err := c.ApplicationRepo.FindByName(ctx, name)
 	available := err == repo.ErrNotFound
@@ -61,7 +65,7 @@ func (c *Controller) updateApplication(ctx context.Context, app *model.Applicati
 }
 
 // this function will insert a new application and send the build request to image builder
-func (c *Controller) CreateNewWebApplication(ctx context.Context, userCode, providerAccessToken, name, gitRepo, gitBranch, listeningPort string, envs []model.KeyValue) (*model.Application, error) {
+func (c *Controller) CreateNewWebApplication(ctx context.Context, userCode, providerAccessToken, name, gitRepo, gitBranch, listeningPort string, envs []model.KeyValue, buildConfig *model.BuildConfig) (*model.Application, error) {
 	app := new(model.Application)
 	app.Name = name
 	app.Kind = model.ApplicationKindWeb
@@ -76,6 +80,7 @@ func (c *Controller) CreateNewWebApplication(ctx context.Context, userCode, prov
 	app.GithubBranch = gitBranch
 	app.GithubRepo = gitRepo
 	app.Envs = envs
+	app.BuildConfig = buildConfig
 
 	if err := c.InsertApplication(ctx, app); err != nil {
 		c.l.Errorf("error inserting application: %v", err)
@@ -195,6 +200,7 @@ loop:
 		//todo: handle waiting error, it's probably because it reached a timeout
 		//in this case it probably means that we reached a cpu/mem cap and we should
 		//expand the infra, it should really not happen
+		//* actually im wrong, this error
 		c.l.Errorf("internal error reached, this should not happen, check infrastructure resources left")
 		app.State = model.ApplicationStateFailed
 	} else {
@@ -357,8 +363,15 @@ func (c *Controller) UpdateApplication(ctx context.Context, app *model.Applicati
 			c.l.WithFields(fields).Errorf("error updating service: %v", err)
 			return err
 		}
+
+		updatedIngressRoute, err := c.ServiceManager.UpdateIngressRoute(ctx, user.Namespace, app.Service.IngressRoute.Name, app.Service.IngressRoute.Match, int32(port))
+		if err != nil {
+			c.l.WithFields(fields).Errorf("error updating ingress route: %v", err)
+			return err
+		}
+
 		updatedService.Deployment = app.Service.Deployment
-		updatedService.IngressRoute = app.Service.IngressRoute
+		updatedService.IngressRoute = updatedIngressRoute
 		app.Service = updatedService
 		c.l.WithFields(fields).Debugf("service %s updated succesfully with new port", app.Service.Name)
 	}
@@ -450,7 +463,6 @@ func (c *Controller) UpdateApplication(ctx context.Context, app *model.Applicati
 }
 
 func (c *Controller) RolloutApplication(ctx context.Context, user *model.User, app *model.Application) error {
-	c.l.Infof("rollout of deployment %s (appID=%s) of user %s", app.Service.Deployment.Name, app.ID.Hex(), user.Code)
 	if app.Kind != model.ApplicationKindWeb {
 		return ErrInvalidOperationWithCurrentKind
 	}
@@ -461,6 +473,8 @@ func (c *Controller) RolloutApplication(ctx context.Context, user *model.User, a
 		app.State != model.ApplicationStateRollingOut {
 		return ErrInvalidOperationInCurrentState
 	}
+
+	c.l.Infof("rollout of app %s (appID=%s) of user %s", app.Name, app.ID.Hex(), user.Code)
 
 	newLastHash, err := c.GetLastCommitHash(ctx, user, app.GithubRepo, app.GithubBranch)
 	if err != nil {
