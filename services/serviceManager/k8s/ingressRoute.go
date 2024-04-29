@@ -18,7 +18,7 @@ func convertK8sIngressRouteToModelIngressRoute(ingressRoute *traefikv1alpha1.Ing
 			Labels:    convertK8sDataToModelData(ingressRoute.Labels),
 		},
 		Entrypoints: ingressRoute.Spec.EntryPoints,
-		Domain:      ingressRoute.Spec.Routes[0].Match,
+		Match:       ingressRoute.Spec.Routes[0].Match,
 	}
 }
 
@@ -33,7 +33,7 @@ func (k K8sOrchestratedServiceManager) GetIngressRoute(ctx context.Context, name
 	return convertK8sIngressRouteToModelIngressRoute(ingressRoute), nil
 }
 
-func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, host, serviceName string, listeningPort int32, labels []model.KeyValue) (*model.IngressRoute, error) {
+func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, match, serviceName string, listeningPort int32, labels []model.KeyValue) (*model.IngressRoute, error) {
 	k8sLables := convertModelDataToK8sData(labels)
 	entrypoints := []string{"web", "websecure"}
 	ingressRoute, err := k.traefikClient.
@@ -50,7 +50,7 @@ func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context
 					EntryPoints: entrypoints,
 					Routes: []traefikv1alpha1.Route{
 						{
-							Match: fmt.Sprintf("Host(`%s`)", host),
+							Match: match,
 							Kind:  "Rule",
 							Services: []traefikv1alpha1.Service{
 								{
@@ -75,7 +75,7 @@ func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context
 	return convertK8sIngressRouteToModelIngressRoute(ingressRoute), nil
 }
 
-func (k K8sOrchestratedServiceManager) UpdateIngressRoute(ctx context.Context, namespace, ingressRouteName, newHost string) (*model.IngressRoute, error) {
+func (k K8sOrchestratedServiceManager) UpdateIngressRoute(ctx context.Context, namespace, ingressRouteName, newMatch string, newPort int32) (*model.IngressRoute, error) {
 	ingressRoute, err := k.traefikClient.
 		TraefikV1alpha1().
 		IngressRoutes(namespace).
@@ -83,7 +83,11 @@ func (k K8sOrchestratedServiceManager) UpdateIngressRoute(ctx context.Context, n
 	if err != nil {
 		return nil, fmt.Errorf("error getting ingress route: %v", err)
 	}
-	ingressRoute.Spec.Routes[0].Match = fmt.Sprintf("Host(`%s`)", newHost)
+	ingressRoute.Spec.Routes[0].Match = newMatch
+	ingressRoute.Spec.Routes[0].Services[0].LoadBalancerSpec.Port = intstr.IntOrString{
+		Type:   intstr.Int,
+		IntVal: newPort,
+	}
 	_, err = k.traefikClient.
 		TraefikV1alpha1().
 		IngressRoutes(namespace).

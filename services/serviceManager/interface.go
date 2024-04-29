@@ -57,8 +57,8 @@ type OrchestratedServiceManager interface {
 
 	//*ingressRoute
 	GetIngressRoute(ctx context.Context, namespace, ingressRouteName string) (*model.IngressRoute, error)
-	CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, host, serviceName string, listeningPort int32, labels []model.KeyValue) (*model.IngressRoute, error)
-	UpdateIngressRoute(ctx context.Context, namespace, ingressRouteName, newHost string) (*model.IngressRoute, error)
+	CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, match, serviceName string, listeningPort int32, labels []model.KeyValue) (*model.IngressRoute, error)
+	UpdateIngressRoute(ctx context.Context, namespace, ingressRouteName, newMatch string, newPort int32) (*model.IngressRoute, error)
 	//gracePeriod in seconds, if 0 it will be deleted immediately, if negative it will be deleted after the default grace period
 	DeleteIngressRoute(ctx context.Context, namespace, ingressRouteName string, gracePeriod int64) error
 
