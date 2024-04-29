@@ -15,12 +15,12 @@ func (c *Controller) GetAvailableGitRepos(ctx context.Context, accessToken strin
 // repo is name/repo
 func (c *Controller) ValidateGitRepo(ctx context.Context, user *model.User, repo string) (string, []string, error) {
 	// return c.gitProvider.ValidateRepo(ctx, accessToken, username, repo)
-	username, repo, err := c.gitProvider.GetUserAndRepo(repo)
+	username, repo, err := c.gitProvider.GetUserAndRepo(ctx, repo)
 	if err != nil {
 		return "", nil, err
 	}
 
-	defaultBranch, branches, err := c.gitProvider.GetRepoBranches(user.Info.GithubAccessToken, username, repo)
+	defaultBranch, branches, err := c.gitProvider.GetRepoBranches(ctx, user.Info.GithubAccessToken, username, repo)
 	if err != nil {
 		c.l.Errorf("error getting branches from git provider: %v", err)
 		return "", nil, err
@@ -30,12 +30,12 @@ func (c *Controller) ValidateGitRepo(ctx context.Context, user *model.User, repo
 
 func (c *Controller) GetLastCommitHash(ctx context.Context, user *model.User, repo string, branch string) (string, error) {
 	// return c.gitProvider.GetLastCommitHash(ctx, accessToken, username, repo, branch)
-	username, repo, err := c.gitProvider.GetUserAndRepo(repo)
+	username, repo, err := c.gitProvider.GetUserAndRepo(ctx, repo)
 	if err != nil {
 		return "", err
 	}
 
-	commitHash, err := c.gitProvider.GetLastCommitHash(user.Info.GithubAccessToken, username, repo, branch)
+	commitHash, err := c.gitProvider.GetLastCommitHash(ctx, user.Info.GithubAccessToken, username, repo, branch)
 	if err != nil {
 		c.l.Errorf("error getting last commit hash from git provider: %v", err)
 		return "", err

@@ -68,17 +68,17 @@ func (c *Controller) GenerateLoginUri(ctx context.Context, kind model.StateKind)
 		return ""
 	}
 
-	return c.gitProvider.GenerateLoginRedirectUri(state)
+	return c.gitProvider.GenerateLoginRedirectUri(ctx, state)
 }
 
 func (c *Controller) GetUserInfoFromOauthCode(ctx context.Context, code string) (*model.UserInfo, error) {
-	accessToken, err := c.gitProvider.GetAccessTokenFromCode(code)
+	accessToken, err := c.gitProvider.GetAccessTokenFromCode(ctx, code)
 	if err != nil {
 		c.l.Errorf("Error getting access token from code: %s", err.Error())
 		return nil, err
 	}
 
-	user, err := c.gitProvider.GetUserInfo(accessToken)
+	user, err := c.gitProvider.GetUserInfo(ctx, accessToken)
 	if err != nil {
 		c.l.Errorf("Error getting user info: %s", err.Error())
 		return nil, err
