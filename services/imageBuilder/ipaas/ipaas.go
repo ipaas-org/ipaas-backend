@@ -1,12 +1,16 @@
 package ipaas
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/ipaas-org/ipaas-backend/model"
+	"github.com/ipaas-org/ipaas-backend/services/imageBuilder"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
+
+var _ imageBuilder.ImageBuilder = new(IpaasImageBuilder)
 
 const (
 	ResponseStatusSuccess = "success"
@@ -28,16 +32,16 @@ func NewIpaasImageBuilder(uri, requestQueue string) *IpaasImageBuilder {
 	}
 }
 
-func (i *IpaasImageBuilder) BuildImage(info model.BuildRequest) error {
+func (i *IpaasImageBuilder) BuildImage(ctx context.Context, info model.Request) error {
 	body, err := json.Marshal(info)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)
 	}
 
-	return i.sendToRabbitmq(body)
+	return i.sendToRabbitmq(ctx, body)
 }
 
-func (i *IpaasImageBuilder) sendToRabbitmq(body []byte) error {
+func (i *IpaasImageBuilder) sendToRabbitmq(ctx context.Context, body []byte) error {
 	connection, err := amqp.Dial(i.uri)
 	if err != nil {
 		return fmt.Errorf("ampq.Dial: %w", err)
@@ -50,7 +54,8 @@ func (i *IpaasImageBuilder) sendToRabbitmq(body []byte) error {
 	}
 	defer channel.Close()
 
-	return channel.Publish(
+	return channel.PublishWithContext(
+		ctx,
 		"",                 // exchange
 		i.requestQueueName, // routing key
 		false,              // mandatory
