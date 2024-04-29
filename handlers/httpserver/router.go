@@ -29,12 +29,24 @@ func InitRouter(e *echo.Echo, l *logrus.Logger, controller *controller.Controlle
 		LogStatus:   true,
 		LogLatency:  true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			l.Infof("ip=%q method=%q uri=%q status=%d latency=%q",
-				v.RemoteIP,
-				v.Method,
-				v.URI,
-				v.Status,
-				v.Latency)
+			if v.Method == echo.OPTIONS {
+				return nil
+			}
+			l.
+				// WithFields(logrus.Fields{
+				// 	"ip":      v.RemoteIP,
+				// 	"method":  v.Method,
+				// 	"uri":     v.URI,
+				// 	"status":  v.Status,
+				// 	"latency": v.Latency,
+				// 	"api":     "httpserver",
+				// }).Info("request")
+				Infof("API REQUEST ip=%q method=%q uri=%q status=%d latency=%q",
+					v.RemoteIP,
+					v.Method,
+					v.URI,
+					v.Status,
+					v.Latency)
 			return nil
 		},
 	}))
@@ -43,11 +55,11 @@ func InitRouter(e *echo.Echo, l *logrus.Logger, controller *controller.Controlle
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		Skipper:      middleware.DefaultSkipper,
 		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 	}))
 
 	echo.NotFoundHandler = func(c echo.Context) error {
-		return respError(c, http.StatusNotFound, "invalid endpoint", fmt.Sprintf("endpoint %s is not handled, check the documentation", c.Request().URL.Path), "invalid_endpoint")
+		return respError(c, 404, "invalid endpoint", fmt.Sprintf("endpoint %s is not handled, check the documentation", c.Request().URL.Path), "invalid_endpoint")
 	}
 
 	httpHandler := NewHttpHandler(e, controller, l)

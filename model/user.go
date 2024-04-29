@@ -2,21 +2,24 @@ package model
 
 import (
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
-	RoleUser    = "user"
-	RoleTesting = "testing" //used only for unit testing
+	RoleUser    Role = "user"
+	RoleTesting Role = "testing" //used only for unit testing
 )
 
 type (
 	User struct {
 		ID           primitive.ObjectID `bson:"_id,omitemtpy" json:"-"`
+		CreatedAt    time.Time          `bson:"createdAt" json:"createdAt"`
+		UpdatedAt    time.Time          `bson:"updatedAt" json:"updatedAt"`
 		Code         string             `bson:"code" json:"code"`
-		NetworkID    string             `bson:"networkId" json:"networkId"`
-		Role         string             `bson:"role" json:"role"` //defaults to "user"
+		Namespace    string             `bson:"namespace" json:"namespace"`
+		Role         Role               `bson:"role" json:"role"` //defaults to "user"
 		UserSettings *UserSettings      `bson:"userSettings" json:"userSettings"`
 		Info         *UserInfo          `bson:"userInfo" json:"userInfo"`
 	}
@@ -33,6 +36,8 @@ type (
 	UserSettings struct {
 		Theme string `bson:"theme" json:"theme"`
 	}
+
+	Role string
 )
 
 func (u *User) String() string {

@@ -2,6 +2,9 @@ app:
   name: "ipaas-mono"
   version: "0.1.0"
   deployment: "dev"
+  apiUrl: "http://localhost:8082"
+  frontendUrl: "http://localhost:5173/"
+  baseDefaultDomain: "cargoway.cloud"
 
 rabbitmq:
   requestQueue: request-test
@@ -20,7 +23,20 @@ database:
 jwt:
   duration: "10h"
 
-oauth:
+gitProvider:
   provider: "github"
-  redirectUri: "http://localhost:8082/api/v1/oauth/callback"
-  callbackUri: "http://localhost:8082/api/v1/oauth/callback"
+  redirectUri: "/api/v1/oauth/callback"
+  callbackUri: "/api/v1/oauth/callback"
+
+traefik:
+  apiBaseUrl: "http://ingress.dev.localhost"
+
+k8s:
+  kubeConfigPath: "/home/vano/.kube/config"
+  cpuResource: "200m"
+  memoryResource: "512Mi"
+  registryUrl: "registry.cargoway.cloud"
+
+logProvider:
+  provider: "grafana-loki"
+  baseUrl: "http://localhost:8090"

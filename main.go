@@ -10,6 +10,7 @@ import (
 
 	"github.com/ipaas-org/ipaas-backend/config"
 	"github.com/ipaas-org/ipaas-backend/controller"
+	events "github.com/ipaas-org/ipaas-backend/handlers/containerEvents"
 	"github.com/ipaas-org/ipaas-backend/handlers/httpserver"
 	"github.com/ipaas-org/ipaas-backend/handlers/rabbitmq"
 	"github.com/ipaas-org/ipaas-backend/pkg/logger"
@@ -28,6 +29,7 @@ const (
 	StartHTTPHandler int = iota + 1
 	StartRMQHandler
 	StartDatabaseCleanupHandler
+	StartContainerEventHandler
 )
 
 func main() {
@@ -56,11 +58,15 @@ func main() {
 		l.Info("using mongo database")
 
 		l.Debug("connecting to database")
-		ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Minute)
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI(conf.Database.URI))
 		if err != nil {
 			l.Fatalf("main - mongo.Connect - error connecting to database: %s", err.Error())
 		}
+		if err := client.Ping(ctx, nil); err != nil {
+			l.Fatalf("main - mongo.Ping - error connecting to database: %s", err.Error())
+		}
+
 		cancel()
 
 		l.Debug("connecting to user collection")
@@ -82,9 +88,17 @@ func main() {
 		applicationCollection := client.Database("ipaas").Collection("application")
 		applicationRepo := mongoRepo.NewApplicationRepoer(applicationCollection)
 		c.ApplicationRepo = applicationRepo
+
+		l.Debug("connecting to template collection")
+		templateCollection := client.Database("ipaas").Collection("templates")
+		templateRepo := mongoRepo.NewTemplateRepoer(templateCollection)
+		c.TemplateRepo = templateRepo
 	default:
 		l.Fatalf("main - unknown database driver: %s", conf.Database.Driver)
 	}
+
+	tempTokenStorage := mock.NewTemporaryTokenRepoer()
+	c.TempTokenRepo = tempTokenStorage
 
 	e := echo.New()
 	httpHandler := httpserver.InitRouter(e, l, c, conf)
@@ -92,6 +106,13 @@ func main() {
 	rmq := rabbitmq.NewRabbitMQ(conf.RMQ.URI, conf.RMQ.RequestQueue, conf.RMQ.ResponseQueue, c, l)
 	if err := rmq.Connect(); err != nil {
 		l.Fatalf("main - rmq.Connect - error connecting to rabbitmq: %s", err.Error())
+	}
+	rmq.Close()
+	l.Debugf("closing rmq connection")
+
+	containerEventHandler, err := events.NewContainerEventHandler(ctx, c, c.ServiceManager.GetEventsChan, l)
+	if err != nil {
+		l.Fatalf("main - events.NewContainerEventHandler - error creating container event handler: %s", err.Error())
 	}
 
 	interrupt := make(chan os.Signal, 1)
@@ -103,6 +124,7 @@ func main() {
 	RoutineMonitor := make(chan int, 100)
 	RoutineMonitor <- StartHTTPHandler
 	RoutineMonitor <- StartRMQHandler
+	RoutineMonitor <- StartContainerEventHandler
 
 	for {
 		select {
@@ -120,6 +142,8 @@ func main() {
 				l.Info("main - rabbitmq finished")
 			case <-httpHandler.Done:
 				l.Info("main - http handler finished")
+			case <-containerEventHandler.Done:
+				l.Info("main - container event handler finished")
 			}
 			//returns 0 because the shutdown was successful
 			os.Exit(0)
@@ -136,11 +160,12 @@ func main() {
 				go rmq.Start(ctx, StartRMQHandler, RoutineMonitor)
 			case StartHTTPHandler:
 				go httpserver.StartRouter(ctx, httpHandler, conf, StartHTTPHandler, RoutineMonitor)
+			case StartContainerEventHandler:
+				go events.StartContainerEventHandler(ctx, containerEventHandler, StartContainerEventHandler, RoutineMonitor)
 			default:
 			}
 		default:
 		}
-
 		time.Sleep(10 * time.Millisecond)
 	}
 }

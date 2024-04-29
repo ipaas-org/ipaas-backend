@@ -74,6 +74,7 @@ func NewController() (*controller.Controller, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(context.Background())
 	c := controller.NewController(ctx, conf, l)
 
+	conf.Database.Driver = "mock"
 	ConnectToRepository(conf, l, c)
 
 	return c, cancel
@@ -108,30 +109,27 @@ func TestIsNameAvailableUserWide(t *testing.T) {
 	c, cancel := NewController()
 	ctx := context.Background()
 
-	user := &model.User{
-		Info: &model.UserInfo{
-			Username: "test-user",
-		},
-		Role:      model.RoleTesting,
-		NetworkID: "test-network-id",
+	info := &model.UserInfo{
+		Username: "test-user",
 	}
-	if err := c.CreateUser(ctx, user); err != nil {
+	user, err := c.CreateUser(ctx, info, model.RoleTesting)
+	if err != nil {
 		t.Error(err)
 	}
 
 	name := "test-app"
-	if !c.IsNameAvailableUserWide(ctx, name, user.Info.Username) {
+	if !c.IsNameAvailableUserWide(ctx, name, user.Code) {
 		t.Errorf("name[%s] should be available", name)
 	}
 
 	if err := c.InsertApplication(ctx, &model.Application{
 		Name:  name,
-		Owner: user.Info.Username,
+		Owner: user.Code,
 	}); err != nil {
 		t.Errorf("error inserting: %v", err)
 	}
 
-	if c.IsNameAvailableUserWide(ctx, name, user.Info.Username) {
+	if c.IsNameAvailableUserWide(ctx, name, user.Code) {
 		t.Errorf("name[%s] should not be available", name)
 	}
 	cancel()

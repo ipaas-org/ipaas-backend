@@ -2,40 +2,36 @@ package controller
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ipaas-org/ipaas-backend/model"
 )
 
-// TODO: IMPORTANTE l'user id quando si crea l'immagine non può essere la mail, meglio usare l'id dell'utente o il suo username
-// TODO: non accettare richieste di build image di un applicazione se l'applicazione è già in status pending|updating
 func (c *Controller) BuildImage(ctx context.Context, app *model.Application, providerToken string) error {
-	if app.State == StatePending || app.State == StateBuilding || app.State == StateUpdating {
-		return ErrUnableToBuildImageInCurrentState
+	if app.State == model.ApplicationStateBuilding ||
+		app.State == model.ApplicationStateStarting {
+		return ErrInvalidOperationInCurrentState
 	}
 
-	request := model.BuildRequest{
-		UUID:      app.ID.Hex(),
-		Token:     providerToken,
-		UserID:    app.Owner,
-		Type:      "repo",
-		Connector: "github",
-		Repo:      app.GithubRepo,
-		Branch:    app.GithubBranch,
+	request := model.Request{
+		ApplicationID: app.ID.Hex(),
+		PullInfo: &model.PullInfoRequest{
+			Token:     providerToken,
+			UserID:    app.Owner,
+			Connector: "github",
+			Repo:      app.GithubRepo,
+			Branch:    app.GithubBranch,
+		},
+		BuildPlan: app.BuildConfig,
 	}
 
-	if err := c.imageBuilder.BuildImage(request); err != nil {
-		c.l.Errorf("error building image: %v", err)
-		app.State = StateFailed
-		if err := c.UpdateApplicationState(ctx, app); err != nil {
-			return fmt.Errorf("c.updateApplicationState: %w", err)
+	c.l.Debugf("sending to rmq: %+v ", request)
+	if err := c.imageBuilder.BuildImage(ctx, request); err != nil {
+		c.l.Errorf("error sending image to image builder: %v", err)
+		app.State = model.ApplicationStateFailed
+		if err := c.updateApplication(ctx, app); err != nil {
+			return err
 		}
-		return fmt.Errorf("c.imageBuilder.BuildImage: %w", err)
-	}
-
-	app.State = StateBuilding
-	if err := c.UpdateApplicationState(ctx, app); err != nil {
-		return fmt.Errorf("c.updateApplicationState: %w", err)
+		return err
 	}
 
 	return nil

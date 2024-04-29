@@ -37,12 +37,12 @@ update: ### update dependencies
 	go get -u -v
 .PHONY: update
 
-build: prep ### build docker image called image-builder
-	docker build -t image-builder .
+build: prep ### build docker image called ipaas
+	docker build -t ipaas .
 .PHONY: docker
 
 services: ### start services needed
-	docker-compose up --build --remove-orphans -d db
+	docker-compose up --build --remove-orphans -d db traefik
 .PHONY: services
 
 up: build ### start docker image following docker-compose

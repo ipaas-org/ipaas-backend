@@ -1,0 +1,111 @@
+[
+  {
+    "available": true,
+    "code": "EUSUG",
+    "name": "mysql 8.2.0",
+    "imageName": "mysql:8.2.0-oracle",
+    "imageID": "",
+    "listeningPort": "3306",
+    "requiredEnvs": [
+      {
+        "key": "MYSQL_ROOT_PASSWORD",
+        "value": "Mandatory variable used to specify the password that will be set for the MySQL root superuser account."
+      }
+    ],
+    "optionalEnvs": [
+      {
+        "key": "MYSQL_DATABASE",
+        "value": "Allows you to specify the name of a database to be created on startup. If a user/password was supplied then that user will be granted superuser access (corresponding to GRANT ALL) to this database."
+      },
+      {
+        "key": "MYSQL_USER",
+        "value": "Used to create a new user on startup (if used with MYSQL_PASSWORD). This user will be granted superuser permissionsfor the database specified by the MYSQL_DATABASE variable. Both variables are required for a user to be created."
+      },
+      {
+        "key": "MYSQL_PASSWORD",
+        "value": "Used to set the password to the user of value MYSQL_USER. Note that both variable needs to be set for the user to be created"
+      }
+    ],
+    "description": "MySQL database template",
+    "kind": "storage",
+    "persistancePath": "/var/lib/mysql",
+    "documentation": "https://hub.docker.com/_/mysql"
+  },
+  {
+    "available": true,
+    "code": "MRNRH",
+    "name": "redis 7.2.3",
+    "imageName": "bitnami/redis:7.2.3",
+    "imageID": "",
+    "listeningPort": "6379",
+    "requiredEnvs": [
+      {
+        "key": "REDIS_PASSWORD",
+        "value": "Password for the default username to access the redis database"
+      }
+    ],
+    "description": "Redis database template based on the bitnami redis image",
+    "kind": "storage",
+    "persistancePath": "/bitnami/redis/data",
+    "documentation": "https://hub.docker.com/r/bitnami/redis"
+  },
+  {
+    "available": true,
+    "code": "COLIR",
+    "name": "phpmyadmin 5.2.1",
+    "imageName": "phpmyadmin:5.2.1-fpm-alpine",
+    "imageID": "76e6e758a0cb65025013e24c05844c3c02ae33593043d49f060f0c0b2f8f6925",
+    "listeningPort": "80",
+    "defaultEnvs": [
+      {
+        "key": "PMA_ARBITRARY",
+        "value": "1"
+      }
+    ],
+    "description": "PhpMyAdmin Dashboard, to access the database provide the application name as the host and login as root with the password defined in the database template, you can use phpmyadmin to manage MySQL and MariaDB",
+    "kind": "managment",
+    "documentation": ""
+  },
+  {
+    "name": "",
+    "imageName": "",
+    "imageID": "",
+    "listeningPort": "",
+    "requiredEnvs": [
+      {
+        "key": "",
+        "value": ""
+      }
+    ],
+    "optionalEnvs": [
+      {
+        "key": "",
+        "value": ""
+      }
+    ],
+    "description": "",
+    "kind": "",
+    "documentation": ""
+  },
+  {
+    "name": "",
+    "imageName": "",
+    "imageID": "",
+    "listeningPort": "",
+    "requiredEnvs": [
+      {
+        "key": "",
+        "value": ""
+      }
+    ],
+    "optionalEnvs": [
+      {
+        "key": "",
+        "value": ""
+      }
+    ],
+    "description": "",
+    "kind": "",
+    "documentation": ""
+  }
+]

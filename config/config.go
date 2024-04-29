@@ -12,19 +12,25 @@ import (
 
 type (
 	Config struct {
-		App      `yaml:"app"`
-		Log      `yaml:"logger"`
-		JWT      `yaml:"jwt"`
-		Oauth    `yaml:"oauth"`
-		RMQ      `yaml:"rabbitmq"`
-		HTTP     `yaml:"http"`
-		Database `yaml:"database"`
+		App         `yaml:"app"`
+		Log         `yaml:"logger"`
+		JWT         `yaml:"jwt"`
+		GitProvider `yaml:"gitProvider"`
+		RMQ         `yaml:"rabbitmq"`
+		HTTP        `yaml:"http"`
+		Database    `yaml:"database"`
+		Traefik     `yaml:"traefik"`
+		K8s         `yaml:"k8s"`
+		LogProvider `yaml:"logProvider"`
 	}
 
 	App struct {
-		Name       string `env-required:"true" yaml:"name"    env:"APP_NAME"`
-		Version    string `env-required:"true" yaml:"version" env:"APP_VERSION"`
-		Deployment string `env-required:"true" yaml:"deployment" env:"APP_DEPLOYMENT"`
+		Name              string `env-required:"true" yaml:"name"    env:"APP_NAME"`
+		Version           string `env-required:"true" yaml:"version" env:"APP_VERSION"`
+		Deployment        string `env-required:"true" yaml:"deployment" env:"APP_DEPLOYMENT"`
+		ApiUrl            string `env-required:"true" yaml:"apiUrl" env:"APP_API_URL"`
+		FrontendUrl       string `env-required:"true" yaml:"frontendUrl" env:"APP_FRONTEND_URL"`
+		BaseDefaultDomain string `env-required:"true" yaml:"baseDefaultDomain" env:"APP_BASE_DEFAULT_DOMAIN"`
 	}
 
 	Log struct {
@@ -37,12 +43,12 @@ type (
 		Duration time.Duration `yaml:"duration" env:"JWT_DURATION"`
 	}
 
-	Oauth struct {
-		Provider     string `env-required:"true" yaml:"provider"    env:"OAUTH_PROVIDER"`
-		RedirectUri  string `env-required:"true" yaml:"redirectUri" env:"OAUTH_REDIRECT_URI"`
-		CallbackUri  string `env-required:"true" yaml:"callbackUri" env:"OAUTH_CALLBACK_URI"`
-		ClientId     string `env:"OAUTH_CLIENT_ID"`
-		ClientSecret string `env:"OAUTH_CLIENT_SECRET"`
+	GitProvider struct {
+		Provider     string `env-required:"true" yaml:"provider"    env:"GIT_PROVIDER"`
+		RedirectUri  string `env-required:"true" yaml:"redirectUri" env:"GIT_PROVIDER_REDIRECT_URI"`
+		CallbackUri  string `env-required:"true" yaml:"callbackUri" env:"GIT_PROVIDER_CALLBACK_URI"`
+		ClientId     string `env:"GIT_PROVIDER_CLIENT_ID"`
+		ClientSecret string `env:"GIT_PROVIDER_CLIENT_SECRET"`
 	}
 
 	HTTP struct {
@@ -58,6 +64,27 @@ type (
 	Database struct {
 		Driver string `env-required:"true" yaml:"driver" env:"DATABASE_DRIVER"`
 		URI    string `env:"DATABASE_URI"`
+	}
+
+	Traefik struct {
+		ApiBaseUrl string `env-required:"true" yaml:"apiBaseUrl" env:"TRAEFIK_API_BASE_URL"`
+		Username   string `env:"TRAEFIK_USERNAME"`
+		Password   string `env:"TRAEFIK_PASSWORD"`
+	}
+
+	K8s struct {
+		KubeConfigPath   string `env-required:"true" yaml:"kubeConfigPath" env:"K8S_KUBE_CONFIG_PATH"`
+		CPUResource      string `env-required:"true" yaml:"cpuResource" env:"K8S_CPU_RESOURCE"`
+		MemoryResource   string `env-required:"true" yaml:"memoryResource" env:"K8S_MEMORY_RESOURCE"`
+		RegistryUrl      string `env-required:"true" yaml:"registryUrl" env:"K8S_REGISTRY_URL"`
+		RegistryUsername string `env-required:"true" yaml:"registryUsername" env:"K8S_REGISTRY_USERNAME"`
+		RegistryPassword string `env-required:"true" yaml:"registryPassword" env:"K8S_REGISTRY_PASSWORD"`
+	}
+
+	LogProvider struct {
+		Provider string `env-required:"true" yaml:"provider" env:"LOG_PROVIDER"`
+		BaseUrl  string `env-required:"true" yaml:"baseUrl" env:"LOG_PROVIDER_BASE_URL"`
+		Token    string `env-required:"true" env:"LOG_PROVIDER_TOKEN"`
 	}
 )
 
@@ -77,7 +104,7 @@ func NewConfig(configPath ...string) (*Config, error) {
 		}
 	}
 
-	mustCheck := []string{"JWT_SECRET", "OAUTH_CLIENT_ID", "OAUTH_CLIENT_SECRET"}
+	mustCheck := []string{"JWT_SECRET", "GIT_PROVIDER_CLIENT_ID", "GIT_PROVIDER_CLIENT_SECRET"}
 
 	for _, v := range mustCheck {
 		logrus.Debug(os.Getenv(v))

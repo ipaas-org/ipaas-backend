@@ -11,42 +11,55 @@ import (
 
 // todo: function needs to return pointer
 // todo: function should return only refresh token and not the expiration as it's inside the structure
-func (c *Controller) CreateRefreshToken(ctx context.Context, userEmail string) (model.RefreshToken, time.Time, error) {
+func (c *Controller) CreateRefreshToken(ctx context.Context, userCode string) (*model.RefreshToken, error) {
 	refreshTokenDuration := time.Hour * 24 * 7
 
 	ran, err := uuid.NewRandom()
 	if err != nil {
-		return model.RefreshToken{}, time.Time{}, err
+		return nil, err
 	}
 
-	refreshTokenValue := ran.String()
-	var refreshToken model.RefreshToken
-	refreshToken.Token = refreshTokenValue
-	refreshToken.Expiration = time.Now().Add(refreshTokenDuration)
-	refreshToken.UserCode = userEmail
+	refreshTokenValue := "rf_" + ran.String()
 
-	return refreshToken, refreshToken.Expiration, nil
+	refreshToken := new(model.RefreshToken)
+	refreshToken.Token = refreshTokenValue
+	refreshToken.ExpiresAt = time.Now().Add(refreshTokenDuration)
+	refreshToken.UserCode = userCode
+
+	return refreshToken, nil
+}
+
+func (c *Controller) CreateAccessToken(ctx context.Context, userCode string) (*model.AccessToken, error) {
+	token, accessTokenDuration, err := c.jwtHandler.GenerateToken(userCode)
+	if err != nil {
+		return nil, err
+	}
+	accessToken := new(model.AccessToken)
+	accessToken.Token = token
+	accessToken.ExpiresAt = accessTokenDuration
+	return accessToken, nil
 }
 
 // todo: should add a access token model that has the expiration in it
 // todo: return pointer to access token model and pointer to refresh token
-func (c *Controller) GenerateTokenPair(ctx context.Context, userCode string) (string, time.Time, string, time.Time, error) {
-	accessToken, accessTokenDuration, err := c.jwtHandler.GenerateToken(userCode)
+func (c *Controller) GenerateTokenPair(ctx context.Context, userCode string) (*model.AccessToken, *model.RefreshToken, error) {
+	accessToken, err := c.CreateAccessToken(ctx, userCode)
 	if err != nil {
-		return "", time.Time{}, "", time.Time{}, err
+		return nil, nil, err
 	}
 
-	refreshToken, refreshTokenExpiresAt, err := c.CreateRefreshToken(ctx, userCode)
+	refreshToken, err := c.CreateRefreshToken(ctx, userCode)
 	if err != nil {
-		return "", time.Time{}, "", time.Time{}, err
+		return nil, nil, err
 	}
 
-	_, err = c.TokenRepo.InsertOne(ctx, &refreshToken)
+	_, err = c.TokenRepo.InsertOne(ctx, refreshToken)
 	if err != nil {
-		return "", time.Time{}, "", time.Time{}, err
+		c.l.Errorf("error inserting refresh token: %v", err)
+		return nil, nil, err
 	}
 
-	return accessToken, accessTokenDuration, refreshToken.Token, refreshTokenExpiresAt, err
+	return accessToken, refreshToken, nil
 }
 
 func (c *Controller) IsRefreshTokenExpired(ctx context.Context, refreshToken string) (bool, error) {
@@ -58,7 +71,7 @@ func (c *Controller) IsRefreshTokenExpired(ctx context.Context, refreshToken str
 		return true, err
 	}
 
-	return token.Expiration.Before(time.Now()), nil
+	return token.ExpiresAt.Before(time.Now()), nil
 }
 
 func (c *Controller) IsAccessTokenExpired(ctx context.Context, accessToken string) (bool, error) {
@@ -67,18 +80,18 @@ func (c *Controller) IsAccessTokenExpired(ctx context.Context, accessToken strin
 
 // todo: should add a access token model that has the expiration in it
 // todo: return pointer to access token model and pointer to refresh token
-func (c *Controller) GenerateTokenPairFromRefreshToken(ctx context.Context, refreshToken string) (string, time.Time, string, time.Time, error) {
+func (c *Controller) GenerateTokenPairFromRefreshToken(ctx context.Context, refreshToken string) (*model.AccessToken, *model.RefreshToken, error) {
 	token, err := c.TokenRepo.FindByToken(ctx, refreshToken)
 	if err != nil {
-		return "", time.Time{}, "", time.Time{}, err
+		return nil, nil, err
 	}
 
-	if token.Expiration.Before(time.Now()) {
-		return "", time.Time{}, "", time.Time{}, ErrTokenExpired
+	if token.ExpiresAt.Before(time.Now()) {
+		return nil, nil, ErrTokenExpired
 	}
 
 	if _, err = c.TokenRepo.DeleteByToken(ctx, refreshToken); err != nil {
-		return "", time.Time{}, "", time.Time{}, err
+		return nil, nil, err
 	}
 	return c.GenerateTokenPair(ctx, token.UserCode)
 }

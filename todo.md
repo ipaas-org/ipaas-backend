@@ -1,9 +1,10 @@
 - stuff
 - [ ] i refresh token devono essere mono uso, una volta usati vanno rimossi dal db
-- [ ] do not use cookies, use authorization header bearer
+- [x] do not use cookies, use authorization header bearer
 - [ ] check if the start server in http handler restarts or not the handler in closed server error
-- utente normale | testing
 - [ ] fare uno studio sul dominio, mancano i termini e spesso non sono consistenti
+
+- utente normale | testing
 
   - funzioni utente
     - [x] create

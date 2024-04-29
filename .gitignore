@@ -14,3 +14,7 @@ tmp/
 
 #...
 .idea/
+
+traefik/log
+
+db/

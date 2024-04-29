@@ -21,10 +21,16 @@ type (
 		State          string             `bson:"state"`
 		Issued         time.Time          `bson:"issDate"`
 		ExpirationDate time.Time          `bson:"expDate"`
+		Kind           StateKind          `bson:"kind"`
 	}
+
+	StateKind string
 )
 
 const (
+	StateKindAPI      StateKind = "api"
+	StateKindFrontend StateKind = "frontend"
+
 	GrantTypeAuthorizationCode = "authorization_code"
 	BaseUrlPaleoID             = "https://id.paleo.bg.it/"
 )

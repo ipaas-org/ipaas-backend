@@ -6,13 +6,18 @@ import (
 	"github.com/ipaas-org/ipaas-backend/config"
 	"github.com/ipaas-org/ipaas-backend/pkg/jwt"
 	"github.com/ipaas-org/ipaas-backend/repo"
+	"github.com/ipaas-org/ipaas-backend/services/gitProvider"
+	"github.com/ipaas-org/ipaas-backend/services/gitProvider/github"
 	"github.com/ipaas-org/ipaas-backend/services/imageBuilder"
 	"github.com/ipaas-org/ipaas-backend/services/imageBuilder/ipaas"
-	"github.com/ipaas-org/ipaas-backend/services/oauth"
-	"github.com/ipaas-org/ipaas-backend/services/oauth/github"
-	"github.com/ipaas-org/ipaas-backend/services/serviceManager"
-	"github.com/ipaas-org/ipaas-backend/services/serviceManager/docker"
+	logprovider "github.com/ipaas-org/ipaas-backend/services/logProvider"
+	"github.com/ipaas-org/ipaas-backend/services/logProvider/grafana"
+	k8smanager "github.com/ipaas-org/ipaas-backend/services/serviceManager/k8s"
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	staticTempEnvironment = "prod"
 )
 
 type Controller struct {
@@ -22,27 +27,36 @@ type Controller struct {
 	TokenRepo       repo.TokenRepoer
 	StateRepo       repo.StateRepoer
 	ApplicationRepo repo.ApplicationRepoer
+	TemplateRepo    repo.TemplateRepoer
+	TempTokenRepo   repo.TemporaryTokenStorage
 
-	oauthService   oauth.Oauther
+	gitProvider    gitProvider.Provider
 	jwtHandler     *jwt.JWThandler
-	serviceManager serviceManager.ServiceManager
+	ServiceManager *k8smanager.K8sOrchestratedServiceManager
 	app            config.App
+	traefik        config.Traefik
+	config         *config.Config
 	imageBuilder   imageBuilder.ImageBuilder
+	logProvider    logprovider.LogProvider
 }
 
 func NewController(ctx context.Context, config *config.Config, l *logrus.Logger) *Controller {
-	var provider oauth.Oauther
-	switch config.Oauth.Provider {
-	case oauth.ProviderGithub:
-		oauth := config.Oauth
+	var provider gitProvider.Provider
+	switch config.GitProvider.Provider {
+	case gitProvider.ProviderGithub:
+		oauth := config.GitProvider
+		oauth.CallbackUri = config.App.ApiUrl + oauth.CallbackUri
 		provider = github.NewGithubOauth(oauth.ClientId, oauth.ClientSecret, oauth.CallbackUri)
 	default:
-		l.Fatalf("Unknown oauth provider: %s", config.Oauth.Provider)
+		l.Fatalf("Unknown oauth provider: %s", config.GitProvider.Provider)
 	}
 
-	serviceManager, err := docker.NewDockerApplicationManager(ctx)
+	serviceManager, err := k8smanager.NewK8sOrchestratedServiceManager(
+		config.K8s.KubeConfigPath,
+		config.K8s.CPUResource,
+		config.K8s.MemoryResource)
 	if err != nil {
-		l.Fatalf("Failed to create docker service manager: %v", err)
+		l.Fatalf("Failed to create k8s service manager: %v", err)
 	}
 
 	imageBuilder := ipaas.NewIpaasImageBuilder(config.RMQ.URI, config.RMQ.RequestQueue)
@@ -53,13 +67,30 @@ func NewController(ctx context.Context, config *config.Config, l *logrus.Logger)
 	l.Info("jwt expiration is:", config.JWT.Duration)
 	jwtHandler := jwt.NewJWThandler(config.JWT.Secret, config.App.Name+":"+config.App.Version, config.JWT.Duration)
 
+	var logProvider logprovider.LogProvider
+	switch config.LogProvider.Provider {
+	case logprovider.LogProviderGrafanaLoki:
+		l.Infof("Using Grafana Loki as log provider")
+		logProvider, err = grafana.NewGrafanaLogProvider(ctx, config.LogProvider.Token, config.LogProvider.BaseUrl)
+		if err != nil {
+			l.Fatalf("Failed to create grafana loki log provider: %v", err)
+		}
+	case logprovider.LogProviderMock:
+		l.Warnf("using mock log provider, currently maps to disabled")
+	default:
+		l.Fatalf("Unknown log provider: %s", config.LogProvider.Provider)
+	}
+
 	l.Infof("sending request on %s queue", config.RMQ.RequestQueue)
 	return &Controller{
 		l:              l,
-		oauthService:   provider,
+		gitProvider:    provider,
 		jwtHandler:     jwtHandler,
-		serviceManager: serviceManager,
+		ServiceManager: serviceManager,
 		app:            config.App,
 		imageBuilder:   imageBuilder,
+		config:         config,
+		traefik:        config.Traefik,
+		logProvider:    logProvider,
 	}
 }

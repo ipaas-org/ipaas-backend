@@ -15,11 +15,20 @@ var (
 	ErrInvalidToken = errors.New("invalid token")
 
 	//application errors
-	ErrApplicationNameNotAvailable = errors.New("name is not available")
-	ErrUnsupportedApplicationKind  = errors.New("unsupported application kind")
+	ErrApplicationNameNotAvailable     = errors.New("name is not available")
+	ErrUnsupportedApplicationKind      = errors.New("unsupported application kind")
+	ErrInvalidPort                     = errors.New("invalid port")
+	ErrInvalidEnv                      = errors.New("invalid env")
+	ErrNoChanges                       = errors.New("no changes")
+	ErrLastVersionAlreadyDeployed      = errors.New("last version already deployed")
+	ErrInvalidOperationWithCurrentKind = errors.New("invalid operation with current kind")
 
-	//image builder
-	ErrUnableToBuildImageInCurrentState = errors.New("unable to build image in current state")
+	//templates errors
+	ErrMissingRequiredEnvForTemplate = errors.New("missing required env for template")
 
+	//image builder errors
+	ErrInvalidOperationInCurrentState = errors.New("invalid operation in current state")
+
+	//generics
 	ErrNotImplemented = errors.New("not implemented")
 )

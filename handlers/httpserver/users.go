@@ -1,8 +1,6 @@
 package httpserver
 
 import (
-	"net/http"
-
 	"github.com/labstack/echo/v4"
 )
 
@@ -49,7 +47,7 @@ func (h *httpHandler) UserInfo(c echo.Context) error {
 		return respErrorFromHttpError(c, msgErr)
 	}
 
-	return respSuccess(c, http.StatusOK, "user info", user)
+	return respSuccess(c, 200, "user info", user)
 }
 
 func (h *httpHandler) UpdateUser(c echo.Context) error {
@@ -63,17 +61,17 @@ func (h *httpHandler) UpdateUser(c echo.Context) error {
 	var post HttpUserSettingsPost
 	err := c.Bind(&post)
 	if err != nil {
-		return respError(c, http.StatusBadRequest, "invalid request body", "invalid request body", "invalid_request_body")
+		return respError(c, 400, "invalid request body", "invalid request body", ErrInvalidRequestBody)
 	}
 	if user.UserSettings.Theme == post.Theme {
-		return respSuccess(c, http.StatusOK, "user info not changed", post.Theme)
+		return respSuccess(c, 200, "user info not changed", post.Theme)
 	}
 
 	user.UserSettings.Theme = post.Theme
 	err = h.controller.UpdateUser(ctx, user)
 	if err != nil {
-		return respError(c, http.StatusNotImplemented, "unexpected error", "unexpected error trying to update user", "unexpected_error")
+		return respError(c, 500, "unexpected error", "unexpected error trying to update user", ErrUnexpected)
 	}
 
-	return respSuccess(c, http.StatusOK, "user info updated correctly", post.Theme)
+	return respSuccess(c, 200, "user info updated correctly", post.Theme)
 }

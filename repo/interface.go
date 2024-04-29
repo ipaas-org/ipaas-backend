@@ -34,14 +34,27 @@ type (
 		FindByID(ctx context.Context, _id primitive.ObjectID) (*model.Application, error)
 		FindByName(ctx context.Context, name string) (*model.Application, error)
 		FindByNameAndOwner(ctx context.Context, name, owner string) (*model.Application, error)
-		FindByContainerID(ctx context.Context, containerID string) (*model.Application, error)
+		// FindByContainerID(ctx context.Context, containerID string) (*model.Application, error)
 		FindByOwner(ctx context.Context, owner string) ([]*model.Application, error)
-		FindByOwnerAndTypeAndIsPublicTrue(ctx context.Context, owner string, appType model.ServiceKind) ([]*model.Application, error)
-		FindByOwnerAndTypeAndIsPublicFalse(ctx context.Context, owner string, appType model.ServiceKind) ([]*model.Application, error)
+		FindByOwnerAndKind(ctx context.Context, owner string, kind model.ApplicationKind) ([]*model.Application, error)
+		FindByOwnerAndKindAndIsPublicTrue(ctx context.Context, owner string, kind model.ApplicationKind) ([]*model.Application, error)
+		FindByOwnerAndKindAndIsPublicFalse(ctx context.Context, owner string, kind model.ApplicationKind) ([]*model.Application, error)
 		FindByOwnerAndIsUpdatableTrue(ctx context.Context, owner string) ([]*model.Application, error)
 		InsertOne(ctx context.Context, a *model.Application) (id interface{}, err error)
 		UpdateByID(ctx context.Context, a *model.Application, id primitive.ObjectID) (bool, error)
 		DeleteByID(ctx context.Context, id primitive.ObjectID) (bool, error)
+	}
+
+	TemplateRepoer interface {
+		FindByCode(ctx context.Context, code string) (*model.Template, error)
+		FindAll(ctx context.Context) ([]*model.Template, error)
+		FindAllAvailable(ctx context.Context) ([]*model.Template, error)
+	}
+
+	TemporaryTokenStorage interface {
+		InsertTokens(ctx context.Context, key string, jwt *model.AccessToken, refresh *model.RefreshToken) error
+		FindByKey(ctx context.Context, key string) (*model.AccessToken, *model.RefreshToken, error)
+		DeleteKey(ctx context.Context, key string) error
 	}
 )
 

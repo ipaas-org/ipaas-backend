@@ -5,7 +5,9 @@ import (
 
 	"github.com/ipaas-org/ipaas-backend/controller"
 	"github.com/ipaas-org/ipaas-backend/model"
+	"github.com/ipaas-org/ipaas-backend/repo"
 	"github.com/labstack/echo/v4"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (h *httpHandler) GetAccessToken(c echo.Context) (string, *HttpError) {
@@ -71,4 +73,32 @@ func (h *httpHandler) ValidateAccessTokenAndGetUser(c echo.Context) (*model.User
 		}
 	}
 	return user, nil
+}
+
+func (h *httpHandler) GetUserAndApplication(c echo.Context) (*model.User, *model.Application, error) {
+	user, msgErr := h.ValidateAccessTokenAndGetUser(c)
+	if msgErr != nil {
+		return nil, nil, respErrorFromHttpError(c, msgErr)
+	}
+
+	ctx := c.Request().Context()
+	applicationIDHex := c.Param("applicationID")
+	if applicationIDHex == "" {
+		return nil, nil, respError(c, 400, "invalid application id", "applicationID is required", ErrInvalidApplicationID)
+	}
+
+	applicationID, err := primitive.ObjectIDFromHex(applicationIDHex)
+	if err != nil {
+		return nil, nil, respError(c, 400, "invalid application id", "applicationID is invalid", ErrInvalidApplicationID)
+	}
+
+	app, err := h.controller.GetApplicationByID(ctx, applicationID)
+	if err != nil {
+		if err == repo.ErrNotFound {
+			return nil, nil, respError(c, 404, "inexisting applcation id", "the application with id="+applicationID.Hex()+" does not exists", ErrInexistingApplication)
+		}
+		return nil, nil, respError(c, 500, "unexpected error", "", ErrUnexpected)
+	}
+
+	return user, app, nil
 }
