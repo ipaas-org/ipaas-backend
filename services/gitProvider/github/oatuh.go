@@ -2,6 +2,7 @@ package github
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -51,7 +52,7 @@ func NewGithubOauth(clientID, clientSecret, callbackUri string) *GithubProvider 
 	}
 }
 
-func (g GithubProvider) GenerateLoginRedirectUri(state string) string {
+func (g GithubProvider) GenerateLoginRedirectUri(ctx context.Context, state string) string {
 	return fmt.Sprintf(
 		"https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=read:user user:email repo write:repo_hook&state=%s",
 		g.clientID,
@@ -60,7 +61,7 @@ func (g GithubProvider) GenerateLoginRedirectUri(state string) string {
 	)
 }
 
-func (g GithubProvider) GetAccessTokenFromCode(code string) (string, error) {
+func (g GithubProvider) GetAccessTokenFromCode(ctx context.Context, code string) (string, error) {
 	requestBodyMap := map[string]string{
 		"client_id":     g.clientID,
 		"client_secret": g.clientSecret,
@@ -73,7 +74,8 @@ func (g GithubProvider) GetAccessTokenFromCode(code string) (string, error) {
 	}
 
 	// POST request to set URL
-	req, err := http.NewRequest(
+	req, err := http.NewRequestWithContext(
+		ctx,
 		"POST",
 		"https://github.com/login/oauth/access_token",
 		bytes.NewBuffer(requestJSON),
@@ -106,11 +108,11 @@ func (g GithubProvider) GetAccessTokenFromCode(code string) (string, error) {
 	return ghresp.AccessToken, nil
 }
 
-func (g GithubProvider) GetUserInfo(accessToken string) (*model.UserInfo, error) {
+func (g GithubProvider) GetUserInfo(ctx context.Context, accessToken string) (*model.UserInfo, error) {
 	info := new(model.UserInfo)
 
 	authorizationHeaderValue := fmt.Sprintf("token %s", accessToken)
-	req, err := http.NewRequest("GET", userInfo, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", userInfo, nil)
 	if err != nil {
 		return info, fmt.Errorf("unable to generate user info request: %w", err)
 	}

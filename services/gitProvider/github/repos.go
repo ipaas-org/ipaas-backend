@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,11 +33,11 @@ const (
 	baseUrlRelease  = "https://api.github.com/repos/%s/%s/releases"
 )
 
-func (g *GithubProvider) GetUserRepos(accessToken string) ([]model.GitRepo, error) {
+func (g *GithubProvider) GetUserRepos(ctx context.Context, accessToken string) ([]model.GitRepo, error) {
 	return nil, gitProvider.ErrNotImplemented
 }
 
-func (g *GithubProvider) GetRepoBranches(accessToken, username, repo string) (string, []string, error) {
+func (g *GithubProvider) GetRepoBranches(ctx context.Context, accessToken, username, repo string) (string, []string, error) {
 	// return "", nil, gitProvider.ErrNotImplemented
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -45,18 +46,18 @@ func (g *GithubProvider) GetRepoBranches(accessToken, username, repo string) (st
 	var err error
 	go func() {
 		defer wg.Done()
-		defaultBranch, err = g.getDefaultBranch(accessToken, username, repo)
+		defaultBranch, err = g.getDefaultBranch(ctx, accessToken, username, repo)
 	}()
 	go func() {
 		defer wg.Done()
-		branches, err = g.getBranches(username, repo, accessToken)
+		branches, err = g.getBranches(ctx, username, repo, accessToken)
 	}()
 	wg.Wait()
 	return defaultBranch, branches, err
 }
 
-func (g *GithubProvider) getDefaultBranch(accessToken, username, repo string) (string, error) {
-	request, err := http.NewRequest("GET", fmt.Sprintf(baseUrlMetadata, username, repo), nil)
+func (g *GithubProvider) getDefaultBranch(ctx context.Context, accessToken, username, repo string) (string, error) {
+	request, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf(baseUrlMetadata, username, repo), nil)
 	if err != nil {
 		return "", err
 	}
@@ -91,9 +92,9 @@ func (g *GithubProvider) getDefaultBranch(accessToken, username, repo string) (s
 	return gjson.Get(jsonBody, "default_branch").String(), nil
 }
 
-func (g *GithubProvider) getBranches(username, repo, token string) ([]string, error) {
+func (g *GithubProvider) getBranches(ctx context.Context, username, repo, token string) ([]string, error) {
 	//get the branches
-	request, err := http.NewRequest("GET", fmt.Sprintf(baseUrlBranches, username, repo), nil)
+	request, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf(baseUrlBranches, username, repo), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -131,16 +132,16 @@ func (g *GithubProvider) getBranches(username, repo, token string) ([]string, er
 }
 
 // GetUserAndRepo get the username of the creator and the repository's name given a GitHub repository url
-func (g *GithubProvider) GetUserAndRepo(url string) (string, string, error) {
+func (g *GithubProvider) GetUserAndRepo(ctx context.Context, url string) (string, string, error) {
 	url = strings.TrimSuffix(url, ".git")
 	split := strings.Split(url, "/")
 
 	return split[len(split)-2], split[len(split)-1], nil
 }
 
-func (g *GithubProvider) GetLastCommitHash(accessToken, username, repo, branch string) (string, error) {
+func (g *GithubProvider) GetLastCommitHash(ctx context.Context, accessToken, username, repo, branch string) (string, error) {
 	url := fmt.Sprintf(baseUrlCommits, username, repo, branch)
-	request, err := http.NewRequest("GET", url, nil)
+	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return "", err
 	}
