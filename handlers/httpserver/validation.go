@@ -76,7 +76,7 @@ func (h *httpHandler) IsValidGitRepo(c echo.Context) error {
 		h.l.Errorf("error validating git repo: %v", err)
 		switch err {
 		case gitProvider.ErrRateLimitReached:
-			return respError(c, 500, "git provider rate limit reached", "looks like you have reached the rate limit on your access token, try again in a few minutes", ErrRateLimitReached)
+			return respError(c, 400, "git provider rate limit reached", "looks like you have reached the github rate limit on your access token, try again in a few minutes", ErrRateLimitReached)
 		case gitProvider.ErrRepoNotFound:
 			return respSuccess(c, 200, "repo is not valid or not found", &HttpGitRepoVlidationResponse{Valid: false})
 		default:
