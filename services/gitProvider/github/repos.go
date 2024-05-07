@@ -6,9 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	trasportHttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/ipaas-org/ipaas-backend/model"
 	"github.com/ipaas-org/ipaas-backend/services/gitProvider"
 	"github.com/tidwall/gjson"
@@ -32,6 +36,45 @@ const (
 	baseUrlTag      = "https://api.github.com/repos/%s/%s/tags"
 	baseUrlRelease  = "https://api.github.com/repos/%s/%s/releases"
 )
+
+func (g *GithubProvider) PullRepository(ctx context.Context, accessToken, username, repo, branch, path string) (string, error) {
+	repoUrl := fmt.Sprintf("https://github.com/%s/%s.git", username, repo)
+
+	if err := os.Mkdir(path, os.ModePerm); err != nil {
+		return "", fmt.Errorf("error creating the tmp folder: %v", err)
+	}
+
+	r, err := git.PlainClone(path, false, &git.CloneOptions{
+		URL:           repoUrl,
+		Depth:         1,
+		SingleBranch:  true,
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
+		Auth: &trasportHttp.BasicAuth{
+			Username: username,
+			Password: accessToken,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+
+	logs, err := r.Log(&git.LogOptions{})
+	if err != nil {
+		return "", err
+	}
+	defer logs.Close()
+
+	lastCommit, err := logs.Next()
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.RemoveAll(fmt.Sprintf("%s/.git", path)); err != nil {
+		return "", err
+	}
+
+	return lastCommit.String(), nil
+}
 
 func (g *GithubProvider) GetUserRepos(ctx context.Context, accessToken string) ([]model.GitRepo, error) {
 	return nil, gitProvider.ErrNotImplemented
