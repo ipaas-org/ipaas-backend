@@ -82,224 +82,348 @@ func NewController() (*controller.Controller, context.CancelFunc) {
 	return c, cancel
 }
 
-// test if the name is available system wide
-// [x] check if a name never used is available
-// [x] check if a name already used is not available
+// test if the name is available system-wide
 func TestIsNameAvailableSystemWide(t *testing.T) {
 	c, cancel := NewController()
 	ctx := context.Background()
 
-	name := "test-app"
-	if !c.IsNameAvailableSystemWide(ctx, name) {
-		t.Errorf("app name [%v] should be available", name)
-	}
-	//this function only check the database
-	//so we need to create a new application to test if the name is available
-	if err := c.InsertApplication(ctx, &model.Application{
-		Name: name,
-	}); err != nil {
-		t.Errorf("error inserting app: %v", err)
-	}
+	// check if an unused app-name is available in the system
+	t.Run("Check unused app-name", func(t *testing.T) {
+		name := "test-app"
+		if !c.IsNameAvailableSystemWide(ctx, name) {
+			t.Errorf("app name [%v] should be available", name)
+		}
 
-	if c.IsNameAvailableSystemWide(ctx, name) {
-		t.Errorf("app name [%v] should not be available", name)
-	}
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name: name,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
+	})
+
+	// check if a used app-name isn't available in the system
+	t.Run("Check used app-name", func(t *testing.T) {
+		name := "test-app"
+		if !c.IsNameAvailableSystemWide(ctx, name) {
+			t.Errorf("app name [%v] should be available", name)
+		}
+
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name: name,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
+
+		if c.IsNameAvailableSystemWide(ctx, name) {
+			t.Errorf("app name [%v] should not be available", name)
+		}
+	})
+
 	cancel()
 }
 
-// func TestIsNameAvailableUserWide(t *testing.T) {
-// 	c, cancel := NewController()
-// 	ctx := context.Background()
-
-// 	info := &model.UserInfo{
-// 		Username: "test-user",
-// 	}
-// 	user, err := c.CreateUser(ctx, info, model.RoleTesting)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-
-// 	name := "test-app"
-// 	if !c.IsNameAvailableUserWide(ctx, name, user.Code) {
-// 		t.Errorf("name[%s] should be available", name)
-// 	}
-
-// 	if err := c.InsertApplication(ctx, &model.Application{
-// 		Name:  name,
-// 		Owner: user.Code,
-// 	}); err != nil {
-// 		t.Errorf("error inserting: %v", err)
-// 	}
-
-// 	if c.IsNameAvailableUserWide(ctx, name, user.Code) {
-// 		t.Errorf("name[%s] should not be available", name)
-// 	}
-// 	cancel()
-// }
-
+// test if an application result existing in the system
 func TestDoesApplicationExists(t *testing.T) {
 	c, cancel := NewController()
 	ctx := context.Background()
 
-	id := primitive.NewObjectID()
-	if exist, err := c.DoesApplicationExists(ctx, id); err != nil {
-		t.Errorf("error checking app: %v", err)
-	} else if exist {
-		t.Errorf("app id [%v] should not exist", id)
-	}
+	// check if the unused app-id refers to an application
+	t.Run("Check unused app-id", func(t *testing.T) {
+		id := primitive.NewObjectID()
+		if exist, err := c.DoesApplicationExists(ctx, id); err != nil {
+			t.Errorf("error checking app: %v", err)
+		} else if exist {
+			t.Errorf("app id [%v] should not exist", id)
+		}
+	})
 
-	name := "test-app"
-	if err := c.InsertApplication(ctx, &model.Application{
-		Name: name,
-	}); err != nil {
-		t.Errorf("error inserting: %v", err)
-	}
+	// check if the used app-id refers to an application
+	t.Run("Check used app-id", func(t *testing.T) {
+		id := primitive.NewObjectID()
+		if exist, err := c.DoesApplicationExists(ctx, id); err != nil {
+			t.Errorf("error checking app: %v", err)
+		} else if exist {
+			t.Errorf("app id [%v] should not exist", id)
+		}
 
-	app, err := c.ApplicationRepo.FindByName(ctx, name)
-	if err != nil {
-		t.Errorf("error finding: %v", err)
-	}
+		name := "test-app"
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name: name,
+		}); err != nil {
+			t.Errorf("error inserting: %v", err)
+		}
 
-	if exist, err := c.DoesApplicationExists(ctx, app.ID); err != nil {
-		t.Errorf("error checking: %v", err)
-	} else if !exist {
-		t.Errorf("app id [%v] should exist", id)
-	}
+		app, err := c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil {
+			t.Errorf("error finding: %v", err)
+		}
+
+		if exist, err := c.DoesApplicationExists(ctx, app.ID); err != nil {
+			t.Errorf("error checking: %v", err)
+		} else if !exist {
+			t.Errorf("app id [%v] should exist", id)
+		}
+	})
+
 	cancel()
 }
 
+// test if an application can be retrieved by its own app-id
 func TestGetApplicationByID(t *testing.T) {
 	c, cancel := NewController()
 	ctx := context.Background()
 
-	id := primitive.NewObjectID()
-	_, err := c.GetApplicationByID(ctx, id)
-	if err == nil {
-		t.Errorf("app id [%v] should not exist", id)
-	}
+	// check if the unused app-id refers to an application
+	t.Run("Check unused app-id", func(t *testing.T) {
+		id := primitive.NewObjectID()
+		_, err := c.GetApplicationByID(ctx, id)
+		if err == nil {
+			t.Errorf("app id [%v] should not exist", id)
+		}
+	})
 
-	name := "test-app"
-	if err := c.InsertApplication(ctx, &model.Application{
-		Name: name,
-	}); err != nil {
-		t.Errorf("error inserting app: %v", err)
-	}
+	// check if the used app-id refers to an application
+	t.Run("Check used app-id", func(t *testing.T) {
+		name := "test-app"
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name: name,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
 
-	app, err := c.ApplicationRepo.FindByName(ctx, name)
-	if err != nil {
-		t.Errorf("error finding app: %v", err)
-	}
+		app, err := c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil {
+			t.Errorf("error finding app: %v", err)
+		}
 
-	_, err = c.GetApplicationByID(ctx, app.ID)
-	if err != nil {
-		t.Errorf("app id [%v] should exist", app.ID)
-	}
+		_, err = c.GetApplicationByID(ctx, app.ID)
+		if err != nil {
+			t.Errorf("app id [%v] should exist", app.ID)
+		}
+	})
+
 	cancel()
 }
 
+// test if all application of one user can be retrieved
 func TestGetAllUserApplications(t *testing.T) {
 	c, cancel := NewController()
 	ctx := context.Background()
 
-	userInfo := &model.UserInfo{
-		Username: "test-user",
-	}
-	user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
-	if err != nil {
-		t.Errorf("error creating user: %v", err)
-	}
+	// check for a user without applications
+	t.Run("Check user with 0 app", func(t *testing.T) {
+		userInfo := &model.UserInfo{
+			Username: "test-user",
+		}
+		user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
+		if err != nil {
+			t.Errorf("error creating user: %v", err)
+		}
 
-	name := "test-app"
-	if err := c.InsertApplication(ctx, &model.Application{
-		Name:  name,
-		Owner: user.Code,
-	}); err != nil {
-		t.Errorf("error inserting app: %v", err)
-	}
+		apps, err := c.GetAllUserApplications(ctx, user.Code)
+		if err != nil {
+			t.Errorf("error getting user apps: %v", err)
+		}
 
-	apps, err := c.GetAllUserApplications(ctx, user.Code)
-	if err != nil {
-		t.Errorf("error getting user apps: %v", err)
-	}
+		if len(apps) != 0 {
+			t.Errorf("user [%v] should not have any apps", user.Code)
+		}
+	})
 
-	app, err := c.ApplicationRepo.FindByName(ctx, name)
-	if err != nil {
-		t.Errorf("error finding app: %v", err)
-	}
+	// check for a user with 1 application
+	t.Run("Check user with 1 app", func(t *testing.T) {
+		userInfo := &model.UserInfo{
+			Username: "test-user",
+		}
+		user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
+		if err != nil {
+			t.Errorf("error creating user: %v", err)
+		}
 
-	if len(apps) != 1 {
-		t.Errorf("user id [%v] should have 1 application", user.Code)
-	} else if apps[0].ID != app.ID {
-		t.Errorf("app id [%v] and app id [%v] should be equal", apps[0].ID, app.ID)
-	}
+		name := "test-app"
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name:  name,
+			Owner: user.Code,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
+
+		apps, err := c.GetAllUserApplications(ctx, user.Code)
+		if err != nil {
+			t.Errorf("error getting user apps: %v", err)
+		}
+
+		app, err := c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil {
+			t.Errorf("error finding app: %v", err)
+		}
+
+		if len(apps) != 1 {
+			t.Errorf("user [%v] should have one app", user.Code)
+		} else if apps[0].ID != app.ID {
+			t.Errorf("app id [%v] and app id [%v] should be equal", apps[0].ID, app.ID)
+		}
+	})
+
 	cancel()
 }
 
+// test if all applications of one user can be retrieved filtered by its own kind
 func TestGetApplicationByKind(t *testing.T) {
 	c, cancel := NewController()
 	ctx := context.Background()
 
-	userInfo := &model.UserInfo{
-		Username: "test-user",
-	}
-	user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
-	if err != nil {
-		t.Errorf("error creating user: %v", err)
-	}
+	// check for a user without applications
+	t.Run("Check user with 0 app", func(t *testing.T) {
+		userInfo := &model.UserInfo{
+			Username: "test-user",
+		}
+		user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
+		if err != nil {
+			t.Errorf("error creating user: %v", err)
+		}
 
-	name := "test-app"
-	if err := c.InsertApplication(ctx, &model.Application{
-		Name:  name,
-		Owner: user.Code,
-		Kind:  model.ApplicationKindWeb,
-	}); err != nil {
-		t.Errorf("error inserting app: %v", err)
-	}
+		apps, err := c.GetApplicationByKind(ctx, user.Code, model.ApplicationKindWeb)
+		if err != nil {
+			t.Errorf("error getting user apps: %v", err)
+		}
 
-	apps, err := c.GetApplicationByKind(ctx, user.Code, model.ApplicationKindWeb)
-	if err != nil {
-		t.Errorf("error getting app: %v", err)
-	}
+		if len(apps) != 0 {
+			t.Errorf("user [%v] should not have any apps", user.Code)
+		}
+	})
 
-	app, err := c.ApplicationRepo.FindByName(ctx, name)
-	if err != nil {
-		t.Errorf("error finding app: %v", err)
-	}
+	// check for a user with 1 application of a different kind that the one searched for
+	t.Run("Check user with 1 app", func(t *testing.T) {
+		userInfo := &model.UserInfo{
+			Username: "test-user",
+		}
+		user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
+		if err != nil {
+			t.Errorf("error creating user: %v", err)
+		}
 
-	if len(apps) != 1 {
-		t.Errorf("user id [%v] should have 1 application", user.Code)
-	} else if apps[0].ID != app.ID {
-		t.Errorf("app id [%v] and app id [%v] should be equal", apps[0].ID, app.ID)
-	}
+		name := "test-app"
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name:  name,
+			Owner: user.Code,
+			Kind:  model.ApplicationKindManagment,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
+
+		apps, err := c.GetApplicationByKind(ctx, user.Code, model.ApplicationKindWeb)
+		if err != nil {
+			t.Errorf("error getting user apps: %v", err)
+		}
+
+		if len(apps) != 0 {
+			t.Errorf("user [%v] should not have any apps of 'Web' kind", user.Code)
+		}
+	})
+
+	// check for a user with 1 application of the same kind as the one searched for
+	t.Run("Check user with 1 app", func(t *testing.T) {
+		userInfo := &model.UserInfo{
+			Username: "test-user",
+		}
+		user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
+		if err != nil {
+			t.Errorf("error creating user: %v", err)
+		}
+
+		name := "test-app"
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name:  name,
+			Owner: user.Code,
+			Kind:  model.ApplicationKindWeb,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
+
+		apps, err := c.GetApplicationByKind(ctx, user.Code, model.ApplicationKindWeb)
+		if err != nil {
+			t.Errorf("error getting user apps: %v", err)
+		}
+
+		app, err := c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil {
+			t.Errorf("error finding app: %v", err)
+		}
+
+		if len(apps) != 1 {
+			t.Errorf("user id [%v] should have 1 application", user.Code)
+		} else if apps[0].ID != app.ID {
+			t.Errorf("app id [%v] and app id [%v] should be equal", apps[0].ID, app.ID)
+		}
+	})
+
 	cancel()
 }
 
+// test if an application can be inserted in the system
 func TestInsertApplication(t *testing.T) {
 	c, cancel := NewController()
 	ctx := context.Background()
 
-	name := "test-app"
-	_, err := c.ApplicationRepo.FindByName(ctx, name)
-	if err != nil && err != repo.ErrNotFound {
-		t.Errorf("error finding app: %v", err)
-	} else if err == nil {
-		t.Errorf("app name [%v] should not exist", name)
-	}
-
-	if err := c.InsertApplication(ctx, &model.Application{
-		Name: name,
-	}); err != nil {
-		t.Errorf("error inserting app: %v", err)
-	}
-
-	_, err = c.ApplicationRepo.FindByName(ctx, name)
-	if err != nil {
-		if err != repo.ErrNotFound {
+	// check if a new unique application can be inserted
+	t.Run("Check insertion of new app", func(t *testing.T) {
+		name := "test-app"
+		_, err := c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil && err != repo.ErrNotFound {
 			t.Errorf("error finding app: %v", err)
-		} else {
-			t.Errorf("app name [%v] should exist", name)
+		} else if err == nil {
+			t.Errorf("app name [%v] should not exist", name)
 		}
-	}
+
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name: name,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
+
+		_, err = c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil {
+			if err != repo.ErrNotFound {
+				t.Errorf("error finding app: %v", err)
+			} else {
+				t.Errorf("app name [%v] should exist", name)
+			}
+		}
+	})
+
+	// check if an already inserted application can't be inserted anymore
+	t.Run("Check insertion of already inserted app", func(t *testing.T) {
+		name := "test-app"
+		app, err := c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil && err != repo.ErrNotFound {
+			t.Errorf("error finding app: %v", err)
+		} else if err == nil {
+			t.Errorf("app [%v] should not exist", app.ID)
+		}
+
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name: name,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
+
+		app, err = c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil {
+			if err != repo.ErrNotFound {
+				t.Errorf("error finding app: %v", err)
+			} else {
+				t.Errorf("app [%v] should exist", app.ID)
+			}
+		}
+
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name: name,
+		}); err == nil {
+			t.Errorf("app [%v] shouldn't be inserted", app.ID)
+		}
+	})
+
 	cancel()
 }
 
