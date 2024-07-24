@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"github.com/ipaas-org/ipaas-backend/handlers/httpserver"
 	"log"
 	"testing"
 	"time"
@@ -427,111 +428,143 @@ func TestInsertApplication(t *testing.T) {
 	cancel()
 }
 
-//TODO: obtain user github infos and app build config in order to test a WebApp creation
-// func TestCreateNewWebApplication(t *testing.T) {
-// 	c, cancel := NewController()
-// 	ctx := context.Background()
+// TODO: obtain user github infos and app build config in order to test a WebApp creation
+// test if a web application can be created, initialized and its relative image built
+func TestCreateNewWebApplication(t *testing.T) {
+	c, cancel := NewController()
+	ctx := context.Background()
 
-// 	userInfo := &model.UserInfo{
-// 		Username: "test-user",
-// 		GithubAccessToken: "???",
-// 	}
-// 	user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
-// 	if err != nil {
-// 		t.Error("error creating user: %v", err)
-// 	}
+	// check for a basic valid image
+	t.Run("Check creation of minimal test app", func(t *testing.T) {
+		userInfo := &model.UserInfo{
+			Username: "test-user",
+		}
+		user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
+		if err != nil {
+			t.Errorf("error creating user: %v", err)
+		}
 
-// 	post := &httpserver.HttpWebApplicationPost{
-// 		Name:        "test-app",
-// 		Repo:        "Vano2903/testing",
-// 		Branch:      "master",
-// 		Port:        "8080",
-// 		Description: "test-app description",
-// 		Envs: []model.KeyValue{
-// 			{Key: "Key", Value: "Value"},
-// 		},
-// 		BuildConfig: &model.BuildConfig{},
-// 	}
-// 	if app, err := c.CreateNewWebApplication(ctx, user.Code, user.Info.GithubAccessToken, post.Name, post.Repo, post.Branch, post.Port, post.Envs, post.BuildConfig); err != nil {
-// 		t.Errorf("error creating app: %v", err)
-// 	}
+		post := &httpserver.HttpWebApplicationPost{
+			Name:        "test-app",
+			Repo:        "Vano2903/testing",
+			Branch:      "master",
+			Port:        "8080",
+			Description: "test-app description",
+			Envs: []model.KeyValue{
+				{Key: "Key", Value: "Value"},
+			},
+			BuildConfig: &model.BuildConfig{},
+		}
+		if _, err := c.CreateNewWebApplication(ctx, user.Code, user.Info.GithubAccessToken, post.Name, post.Repo, post.Branch, post.Port, post.Envs, post.BuildConfig); err != nil {
+			t.Errorf("error creating app: %v", err)
+		}
 
-// 	app, err := c.ApplicationRepo.FindByName(ctx, post.Name)
-// 	if err != nil {
-// 		t.Error("error finding app: %v", err)
-// 	} else if app.Owner != user.Code {
-// 		t.Errorf("app owner [%v] should be user code [%v]", app.Owner, user.Code)
-// 	}
-// 	cancel()
-// }
+		app, err := c.ApplicationRepo.FindByName(ctx, post.Name)
+		if err != nil {
+			t.Error("error finding app: %v", err)
+		} else if app.Owner != user.Code {
+			t.Errorf("app owner [%v] should be user code [%v]", app.Owner, user.Code)
+		}
+	})
+
+	cancel()
+}
 
 // TODO: obtain image infos in order to test an App (from id) creation
-// func TestCreateApplicationFromApplicationIDandImageID(t *testing.T) {
-// 	c, cancel := NewController()
-// 	ctx := context.Background()
+func TestCreateApplicationFromApplicationIDandImageID(t *testing.T) {
+	c, cancel := NewController()
+	ctx := context.Background()
 
-// 	name := "test-app"
-// 	if err := c.InsertApplication(ctx, &model.Application{
-// 		Name:          name,
-// 		Kind:          model.ApplicationKindWeb,
-// 		ListeningPort: "8080",
-// 		Description:   "test-app description",
-// 		GithubRepo:    "Vano2903/testing",
-// 		GithubBranch:  "master",
-// 		Envs: []model.KeyValue{
-// 			{Key: "Key", Value: "Value"},
-// 		},
-// 	}); err != nil {
-// 		t.Errorf("error inserting app: %v", err)
-// 	}
+	// check for creation from invalid application id
+	t.Run("check with invalid app id", func(t *testing.T) {
+		//TODO: implement this unit test
+	})
 
-// 	app, err := c.ApplicationRepo.FindByName(ctx, name)
-// 	if err != nil {
-// 		t.Errorf("error finding app: %v", err)
-// 	}
+	// check for creation from invalid image id
+	t.Run("check with invalid image id", func(t *testing.T) {
+		//TODO: implement this unit test
+	})
 
-// 	//TODO:
-// 	imageID := "4c408489c41a"
-// 	buildCommit := "4c408489c41a"
+	// check for creation from valid both application id and image id
+	t.Run("check with valid app id and image id", func(t *testing.T) {
+		userInfo := &model.UserInfo{
+			Username: "test-user",
+		}
+		user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
+		if err != nil {
+			t.Errorf("error creating user: %v", err)
+		}
 
-// 	if err := c.CreateApplicationFromApplicationIDandImageID(ctx, app.ID.String(), imageID, buildCommit); err != nil {
-// 		t.Errorf("error creating app: %v", err)
-// 	}
-// 	cancel()
-// }
+		name := "test-app"
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name:          name,
+			Owner:         user.Code,
+			Kind:          model.ApplicationKindWeb,
+			ListeningPort: "8080",
+			Description:   "test-app description",
+			GithubRepo:    "Vano2903/testing",
+			GithubBranch:  "master",
+			Envs: []model.KeyValue{
+				{Key: "Key", Value: "Value"},
+			},
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
 
+		app, err := c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil {
+			t.Errorf("error finding app: %v", err)
+		}
+
+		//TODO:
+		imageID := "4c408489c41a"
+		buildCommit := "4c408489c41a"
+
+		if err := c.CreateApplicationFromApplicationIDandImageID(ctx, app.ID.String(), imageID, buildCommit); err != nil {
+			t.Errorf("error creating app: %v", err)
+		}
+	})
+
+	cancel()
+}
+
+// test if an application can be deleted
 func TestDeleteApplication(t *testing.T) {
 	c, cancel := NewController()
 	ctx := context.Background()
 
-	userInfo := &model.UserInfo{
-		Username: "test-user",
-	}
-	user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
-	if err != nil {
-		t.Errorf("error creating user: %v", err)
-	}
+	// check for an existing application
+	t.Run("", func(t *testing.T) {
+		userInfo := &model.UserInfo{
+			Username: "test-user",
+		}
+		user, err := c.CreateUser(ctx, userInfo, model.RoleTesting)
+		if err != nil {
+			t.Errorf("error creating user: %v", err)
+		}
 
-	name := "test-app"
-	if err := c.InsertApplication(ctx, &model.Application{
-		Name:  name,
-		Owner: user.Code,
-	}); err != nil {
-		t.Errorf("error inserting app: %v", err)
-	}
+		name := "test-app"
+		if err := c.InsertApplication(ctx, &model.Application{
+			Name:  name,
+			Owner: user.Code,
+		}); err != nil {
+			t.Errorf("error inserting app: %v", err)
+		}
 
-	app, err := c.ApplicationRepo.FindByName(ctx, name)
-	if err != nil {
-		t.Errorf("error finding app: %v", err)
-	}
+		app, err := c.ApplicationRepo.FindByName(ctx, name)
+		if err != nil {
+			t.Errorf("error finding app: %v", err)
+		}
 
-	if err := c.DeleteApplication(ctx, app, user); err != nil {
-		t.Errorf("error deleting app: %v", err)
-	}
+		if err := c.DeleteApplication(ctx, app, user); err != nil {
+			t.Errorf("error deleting app: %v", err)
+		}
 
-	if _, err := c.ApplicationRepo.FindByName(ctx, name); err != repo.ErrNotFound {
-		t.Errorf("app name [%v] should not exist", name)
-	}
+		if _, err := c.ApplicationRepo.FindByName(ctx, name); err != repo.ErrNotFound {
+			t.Errorf("app name [%v] should not exist", name)
+		}
+	})
+
 	cancel()
 }
 
