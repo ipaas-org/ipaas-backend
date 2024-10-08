@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	ErrorCreatingResource error = fmt.Errorf("erorr")
+	ErrorCreatingResource error = fmt.Errorf("error creating resource")
 )
 
 // TODO: volume support is not implemented in
@@ -34,7 +34,7 @@ type OrchestratedServiceManager interface {
 	//gracePeriod in seconds, if 0 it will be deleted immediately, if negative it will be deleted after the default grace period
 	DeleteNamespace(ctx context.Context, namespace string, gracePeriod int64) error
 	//to be used for creating a new namespace and then creating a new secret in it
-	CreateNewRegistrySecret(ctx context.Context, namespace, registryUrl, username, password string) (string, error)
+	CreateNewRegistrySecret(ctx context.Context, namespace, name, registryUrl, username, password string) (string, error)
 
 	//*deployments
 	GetDeployment(ctx context.Context, namespace, deploymentName string) (*model.Deployment, error)
@@ -57,7 +57,7 @@ type OrchestratedServiceManager interface {
 
 	//*ingressRoute
 	GetIngressRoute(ctx context.Context, namespace, ingressRouteName string) (*model.IngressRoute, error)
-	CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, match, serviceName string, listeningPort int32, labels []model.KeyValue) (*model.IngressRoute, error)
+	CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, match, serviceName string, listeningPort int32, middlewares []model.Middleware, labels []model.KeyValue) (*model.IngressRoute, error)
 	UpdateIngressRoute(ctx context.Context, namespace, ingressRouteName, newMatch string, newPort int32) (*model.IngressRoute, error)
 	//gracePeriod in seconds, if 0 it will be deleted immediately, if negative it will be deleted after the default grace period
 	DeleteIngressRoute(ctx context.Context, namespace, ingressRouteName string, gracePeriod int64) error
@@ -73,3 +73,9 @@ type OrchestratedServiceManager interface {
 	CreateNewPersistentVolumeClaim(ctx context.Context, namespace, pvcName, storageClassName string, storageSize int64, labels []model.KeyValue) (*model.PersistentVolumeClaim, error)
 	DeletePersistantVolumeClmain(ctx context.Context, namespace, pvcName string, gracePeriod int64) error
 }
+
+const (
+	MiddlewareTypeBasicAuth  = "basicAuth"
+	MiddlewareTypeDigestAuth = "digestAuth"
+	MiddlewareTypeError      = "error"
+)
