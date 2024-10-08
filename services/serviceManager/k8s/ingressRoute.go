@@ -33,9 +33,16 @@ func (k K8sOrchestratedServiceManager) GetIngressRoute(ctx context.Context, name
 	return convertK8sIngressRouteToModelIngressRoute(ingressRoute), nil
 }
 
-func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, match, serviceName string, listeningPort int32, labels []model.KeyValue) (*model.IngressRoute, error) {
+func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context, namespace, ingressRouteName, match, serviceName string, listeningPort int32, middlewares []model.Middleware, labels []model.KeyValue) (*model.IngressRoute, error) {
 	k8sLables := convertModelDataToK8sData(labels)
 	entrypoints := []string{"web", "websecure"}
+	var middlewaresIngressRoute []traefikv1alpha1.MiddlewareRef
+	for _, middleware := range middlewares {
+		middlewaresIngressRoute = append(middlewaresIngressRoute, traefikv1alpha1.MiddlewareRef{
+			Name:      middleware.Name,
+			Namespace: middleware.Namespace,
+		})
+	}
 	ingressRoute, err := k.traefikClient.
 		TraefikV1alpha1().
 		IngressRoutes(namespace).
@@ -63,6 +70,7 @@ func (k K8sOrchestratedServiceManager) CreateNewIngressRoute(ctx context.Context
 									},
 								},
 							},
+							Middlewares: middlewaresIngressRoute,
 						},
 					},
 				},
