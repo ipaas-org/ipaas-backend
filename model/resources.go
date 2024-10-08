@@ -53,16 +53,35 @@ type (
 
 	IngressRoute struct {
 		BaseResource
-		Entrypoints []string `bson:"entrypoints" json:"entrypoints"`
-		Match       string   `bson:"match" json:"match"`
+		Entrypoints []string     `bson:"entrypoints" json:"entrypoints"`
+		Match       string       `bson:"match" json:"match"`
+		Middlewares []Middleware `bson:"middlewares" json:"middlewares"`
 		// Service     *Service `bson:"service" json:"service"`
 	}
+
+	Middleware struct {
+		BaseResource
+		Type      MiddlewareType       `bson:"type" json:"type"`
+		ErrorPage *MiddlewareErrorPage `bson:"errorPage" json:"errorPage"`
+	}
+
+	MiddlewareErrorPage struct {
+		Status  []string `bson:"status" json:"status"`
+		Service *Service `bson:"service" json:"service"`
+		Query   string   `bson:"query" json:"query"`
+	}
+
+	MiddlewareType string
 
 	ContainerStatus string
 )
 
 const (
 	ContainerCreatedStatus ContainerStatus = "created"
+)
+
+const (
+	MiddlewareTypeErrorPage MiddlewareType = "errorPage"
 )
 
 const (
