@@ -29,6 +29,12 @@ const (
 	ErrInvalidOperationWithCurrentKind HttpErrorType = "invalid_operation_with_current_kind"
 	ErrVersionUpToDate                 HttpErrorType = "version_up_to_date"
 	ErrInvalidApplicationState         HttpErrorType = "invalid_application_state"
+	ErrBranchNotFound                  HttpErrorType = "branch_not_found"
+	ErrRootNotFound                    HttpErrorType = "root_not_found"
+	ErrInvalidBuildPlan                HttpErrorType = "invalid_build_plan"
+	ErrInvalidBuilder                  HttpErrorType = "invalid_builder"
+	ErrInvalidDockerfilePath           HttpErrorType = "invalid_dockerfile_path"
+	ErrInvalidPhaseCommand             HttpErrorType = "invalid_phase_command"
 
 	//template related errors
 	ErrTemplateCodeNotFound          HttpErrorType = "template_code_not_found"

@@ -11,7 +11,7 @@ import (
 )
 
 type (
-	HttpWebApplicationPost struct {
+	HttpRequestNewWebApplication struct {
 		Name   string `json:"name"`
 		Repo   string `json:"repo"`
 		Branch string `json:"branch"`
@@ -20,13 +20,18 @@ type (
 		Description string           `json:"description,omitempty"`
 		Envs        []model.KeyValue `json:"envs,omitempty"`
 
-		BuildConfig *model.BuildConfig `json:"buildConfig"`
+		RootDirectory string `json:"rootDirectory"`
 	}
 
-	HttpWebApplicationPatch struct {
+	HttpRequestApplicationGeneralUpdate struct {
 		Name string           `json:"name,omitempty"`
 		Port string           `json:"port,omitempty"`
 		Envs []model.KeyValue `json:"envs,omitempty"`
+		// todo: add start command, as it doesnt require a new build
+	}
+
+	HttpRequestApplicationBuildUpdate struct {
+		BuildConfig model.BuildConfig `json:"buildConfig"`
 	}
 )
 
@@ -38,7 +43,7 @@ func (h *httpHandler) NewWebApplication(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	post := new(HttpWebApplicationPost)
+	post := new(HttpRequestNewWebApplication)
 	if err := c.Bind(post); err != nil {
 		h.l.Debugf("error binding request body: %v", err)
 		return respError(c, 400, "invalid request body", "", ErrInvalidRequestBody)
@@ -47,7 +52,11 @@ func (h *httpHandler) NewWebApplication(c echo.Context) error {
 		return respError(c, 400, "name taken", "name not available as it's already been taken", ErrNameTaken)
 	}
 
-	app, err := h.controller.CreateNewWebApplication(ctx, user.Code, user.Info.GithubAccessToken, post.Name, post.Repo, post.Branch, post.Port, post.Envs, post.BuildConfig)
+	if post.RootDirectory == "" {
+		post.RootDirectory = "/"
+	}
+
+	app, err := h.controller.CreateNewWebApplication(ctx, user.Code, user.Info.GithubAccessToken, post.Name, post.Repo, post.Branch, post.Port, post.Envs, post.RootDirectory)
 	if err != nil {
 		//TODO: handle error
 		return respError(c, 500, "unexpected error", "", ErrUnexpected)
@@ -197,8 +206,8 @@ func (h *httpHandler) DeleteApplication(c echo.Context) error {
 	return respSuccess(c, 200, "application deleted successfully", nil)
 }
 
-func (h *httpHandler) UpdateApplication(c echo.Context) error {
-	var patch HttpWebApplicationPatch
+func (h *httpHandler) UpdateApplicationGeneral(c echo.Context) error {
+	var patch HttpRequestApplicationGeneralUpdate
 	if err := c.Bind(&patch); err != nil {
 		return respError(c, 400, "invalid request body", "", ErrInvalidRequestBody)
 	}
@@ -218,7 +227,8 @@ func (h *httpHandler) UpdateApplication(c echo.Context) error {
 
 	ctx := c.Request().Context()
 
-	if err := h.controller.UpdateApplication(ctx, app, user, patch.Name, patch.Port, patch.Envs); err != nil {
+	if err := h.controller.UpdateApplicationGeneral(ctx, app, user, patch.Name, patch.Port, patch.Envs); err != nil {
+		h.l.Errorf("error updating application: %v", err)
 		switch err {
 		case controller.ErrInvalidOperationInCurrentState:
 			return respError(c, 501, "unable to update name", "the application does not support updating the name at the moment", ErrNotImplemented)
@@ -229,11 +239,48 @@ func (h *httpHandler) UpdateApplication(c echo.Context) error {
 		case controller.ErrNoChanges:
 			return respSuccess(c, 200, "no changes", nil)
 		default:
-			h.l.Errorf("error updating application: %v", err)
 			return respError(c, 500, "unexpected error", "", ErrUnexpected)
 		}
 	}
 	return respSuccess(c, 200, "application updated successfully", nil)
+}
+
+func (h *httpHandler) UpdateApplicationBuild(c echo.Context) error {
+	var patch HttpRequestApplicationBuildUpdate
+	if err := c.Bind(&patch); err != nil {
+		return respError(c, 400, "invalid request body", "", ErrInvalidRequestBody)
+	}
+
+	user, app, err := h.GetUserAndApplication(c)
+	if user == nil || app == nil {
+		return err
+	}
+
+	if user.Code != app.Owner {
+		return respError(c, 404, "inexisting applcation id", fmt.Sprintf("the application with id=%s does not exists", app.ID.Hex()), ErrInexistingApplication)
+	}
+
+	ctx := c.Request().Context()
+	if err := h.controller.UpdateApplicationBuild(ctx, app, user, &patch.BuildConfig); err != nil {
+		h.l.Errorf("error updating application build: %v", err)
+		switch err {
+		case controller.ErrInvalidOperationWithCurrentKind:
+			return respError(c, 400, "invalid operation with current kind", "the application kind does not support this operation", ErrInvalidOperationWithCurrentKind)
+		case controller.ErrInvalidOperationInCurrentState:
+			return respError(c, 400, "invalid operation in current state", fmt.Sprintf("the application is in %q state, this operation is not allowed in that state", app.State), ErrInvalidOperationInCurrentState)
+		case controller.ErrInvalidBuildPlan:
+			return respError(c, 400, "invalid build plan", "the provided build plan is invalid", ErrInvalidRequestBody)
+		case controller.ErrInvalidBuilder:
+			return respError(c, 400, "invalid builder", "the provided builder is invalid, currently only supported builders are 'nixpacks' and 'docker'", ErrInvalidRequestBody)
+		case controller.ErrInvalidDockerfilePath:
+			return respError(c, 400, "invalid dockerfile path", "the provided dockerfile path is invalid, it needs to be a valid path to a file in the repository", ErrInvalidRequestBody)
+		case controller.ErrInvalidPhaseCommand:
+			return respError(c, 400, "invalid phase command", "the provided phase command is invalid, it needs to be a valid command", ErrInvalidRequestBody)
+		default:
+			return respError(c, 500, "unexpected error", "", ErrUnexpected)
+		}
+	}
+	return respSuccess(c, 200, "application build plan is being updated", nil)
 }
 
 func (h *httpHandler) RedeployApplication(c echo.Context) error {
