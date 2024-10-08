@@ -11,12 +11,12 @@ const (
 // ConnectionID string `json:"connection_id,omitemtpy"`
 type HttpError struct {
 	Code        int           `json:"code" example:"400"`
-	IsError     bool          `json:"is_error" example:"true"`
+	IsError     bool          `json:"isError" example:"true"`
 	Message     string        `json:"message" example:"Bad Request"`
 	Details     string        `json:"details,omitempty" example:"Bad Request With More Info"`
 	Instance    string        `json:"instance,omitempty" example:"/api/v1/users/1"`
-	ErrorType   HttpErrorType `json:"error_type,omitempty" example:"invalid_id"`
-	ErrorDocUrl string        `json:"error_doc_url,omitempty" example:"https://example.com/docs/errors/invalid_id"`
+	ErrorType   HttpErrorType `json:"errorType,omitempty" example:"invalid_id"`
+	ErrorDocUrl string        `json:"errorDocUrl,omitempty" example:"https://example.com/docs/errors/invalid_id"`
 }
 
 func respError(c echo.Context, code int, message, details string, errType HttpErrorType) error {
@@ -62,7 +62,7 @@ func respErrorFromHttpError(c echo.Context, err *HttpError) error {
 
 type HttpSuccess struct {
 	Code    int         `json:"code" example:"200"`
-	IsError bool        `json:"is_error" example:"false"`
+	IsError bool        `json:"isError" example:"false"`
 	Message string      `json:"message" example:"OK"`
 	Data    interface{} `json:"data,omitempty"`
 }
