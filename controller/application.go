@@ -12,10 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func (c *Controller) GetApplicationDefaults(ctx context.Context, repo string) {
-
-}
-
 func (c *Controller) IsNameAvailableSystemWide(ctx context.Context, name string) bool {
 	_, err := c.ApplicationRepo.FindByName(ctx, name)
 	available := err == repo.ErrNotFound
@@ -65,7 +61,7 @@ func (c *Controller) updateApplication(ctx context.Context, app *model.Applicati
 }
 
 // this function will insert a new application and send the build request to image builder
-func (c *Controller) CreateNewWebApplication(ctx context.Context, userCode, providerAccessToken, name, gitRepo, gitBranch, listeningPort string, envs []model.KeyValue, buildConfig *model.BuildConfig) (*model.Application, error) {
+func (c *Controller) CreateNewWebApplication(ctx context.Context, userCode, providerAccessToken, name, gitRepo, gitBranch, listeningPort string, envs []model.KeyValue, rootDirectory string) (*model.Application, error) {
 	app := new(model.Application)
 	app.Name = name
 	app.Kind = model.ApplicationKindWeb
@@ -80,21 +76,28 @@ func (c *Controller) CreateNewWebApplication(ctx context.Context, userCode, prov
 	app.GithubBranch = gitBranch
 	app.GithubRepo = gitRepo
 	app.Envs = envs
-	app.BuildConfig = buildConfig
+	// app.BuildConfig = buildConfig
+	if rootDirectory == "" {
+		rootDirectory = "/"
+	}
+	app.BuildPlan = &model.BuildConfig{
+		RootDirectory: rootDirectory,
+	}
 
 	if err := c.InsertApplication(ctx, app); err != nil {
 		c.l.Errorf("error inserting application: %v", err)
 		return nil, err
 	}
 
-	if err := c.BuildImage(ctx, app, providerAccessToken); err != nil {
-		c.l.Errorf("error building image: %v", err)
+	commitHash := "" //empty string means latest commit
+	if err := c.BuildImage(ctx, app, commitHash, providerAccessToken); err != nil {
+		c.l.Errorf("error sending build request: %v", err)
 		return nil, err
 	}
 	return app, nil
 }
 
-func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Context, applicationID, registryImage, BuildCommit string) error {
+func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Context, applicationID string, build *model.BuildResponse) error {
 	//convert the app id to primitive object id
 	appID, err := primitive.ObjectIDFromHex(applicationID)
 	if err != nil {
@@ -112,7 +115,7 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 		return err
 	}
 
-	//get user from the application owner and get his docker network id
+	//get user from the application owner and get his namespace
 	user, err := c.UserRepo.FindByCode(ctx, app.Owner)
 	if err != nil {
 		c.l.Errorf("error user not found for application owner: %v", err)
@@ -127,11 +130,16 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 		return err
 	}
 
-	app.BuiltCommit = BuildCommit
+	app.BuiltCommit = build.BuiltCommit
+	app.State = model.ApplicationStateFailed
+	app.BuildOutput = build.BuildOutput
+	app.BuildPlan = build.PlanUsed
+	app.RepoAnalisys = build.RepoAnalisys
+
 	if app.Service != nil {
 		c.l.Infof("updating deployment with new image")
 
-		deployment, err := c.ServiceManager.UpdateDeployment(ctx, user.Namespace, app.Service.Deployment.Name, registryImage, app.Service.Deployment.Replicas, app.Service.Deployment.Port, app.Service.Deployment.Labels, "")
+		deployment, err := c.ServiceManager.UpdateDeployment(ctx, user.Namespace, app.Service.Deployment.Name, build.ImageName, app.Service.Deployment.Replicas, app.Service.Deployment.Port, app.Service.Deployment.Labels, "")
 		if err != nil {
 			c.l.Errorf("error updating deployment: %v", err)
 			return err
@@ -151,7 +159,7 @@ func (c *Controller) CreateApplicationFromApplicationIDandImageID(ctx context.Co
 	}
 
 	//todo: implement volumes
-	deployment, err := c.createDeployment(ctx, app, user, registryImage, configMap.Name, nil)
+	deployment, err := c.createDeployment(ctx, app, user, build.ImageName, configMap.Name, nil)
 	if err != nil {
 		return err
 	}
@@ -170,7 +178,7 @@ loop:
 		case _, ok := <-done:
 			if !ok {
 				//todo: choose what to do in this case
-				c.l.Errorf("done chan is closed, either context was cancelled or something worst O-O")
+				c.l.Errorf("done chan is closed, either context was cancelled or something worse O-O")
 				if ctx.Err() != nil {
 					c.l.Errorf("context cancelled while a deployment was being created, no further changes will be done at the moment")
 				} else {
@@ -200,7 +208,8 @@ loop:
 		//todo: handle waiting error, it's probably because it reached a timeout
 		//in this case it probably means that we reached a cpu/mem cap and we should
 		//expand the infra, it should really not happen
-		//* actually im wrong, this error
+		//* actually im wrong, this error can happen, require study
+		//todo: check when this error may verify
 		c.l.Errorf("internal error reached, this should not happen, check infrastructure resources left")
 		app.State = model.ApplicationStateFailed
 	} else {
@@ -276,8 +285,11 @@ func (c *Controller) FailedBuild(ctx context.Context, info *model.BuildResponse)
 
 	app.BuiltCommit = info.BuiltCommit
 	app.State = model.ApplicationStateFailed
-	//TODO: write info.Message in the app logs
+	app.BuildOutput = info.BuildOutput
+	app.BuildPlan = info.PlanUsed
+	app.RepoAnalisys = info.RepoAnalisys
 	if _, err := c.ApplicationRepo.UpdateByID(ctx, app, app.ID); err != nil {
+		c.l.Errorf("error updating application: %v", err)
 		return err
 	}
 	return nil
@@ -319,7 +331,7 @@ func (c *Controller) AddCurrentPodToApplication(ctx context.Context, application
 	}()
 }
 
-func (c *Controller) UpdateApplication(ctx context.Context, app *model.Application, user *model.User, name string, patchPort string, envs []model.KeyValue) error {
+func (c *Controller) UpdateApplicationGeneral(ctx context.Context, app *model.Application, user *model.User, name string, patchPort string, envs []model.KeyValue) error {
 	c.l.Debugf("updating application %s", app.ID.Hex())
 	fields := make(logrus.Fields)
 	fields["applicationID"] = app.ID.Hex()
@@ -330,6 +342,7 @@ func (c *Controller) UpdateApplication(ctx context.Context, app *model.Applicati
 		hasSomethingChanged = true
 		fields["name"] = name
 		fields["oldName"] = app.Name
+		fields["hasSomethingChanged"] = hasSomethingChanged
 		c.l.WithFields(fields).Info("user trying to change name, currently not implemented")
 		return ErrInvalidOperationInCurrentState
 		// switch app.Kind {
@@ -462,6 +475,68 @@ func (c *Controller) UpdateApplication(ctx context.Context, app *model.Applicati
 	return nil
 }
 
+func (c *Controller) UpdateApplicationBuild(ctx context.Context, app *model.Application, user *model.User, buildConfig *model.BuildConfig) error {
+	if app.Kind != model.ApplicationKindWeb {
+		// TODO: allow this for management and storage
+		// in ui it will be under "advanced settings"
+		// it will probably only be in the entrypoint
+		return ErrInvalidOperationWithCurrentKind
+	}
+
+	if app.State != model.ApplicationStateRunning &&
+		app.State != model.ApplicationStateFailed &&
+		app.State != model.ApplicationStateCrashed {
+		return ErrInvalidOperationInCurrentState
+	}
+
+	c.l.Debugf("updating application %s", app.ID.Hex())
+	fields := make(logrus.Fields)
+	fields["applicationID"] = app.ID.Hex()
+	fields["userID"] = user.Code
+	fields["action"] = "UpdateApplication"
+
+	if buildConfig == nil {
+		return ErrInvalidBuildPlan
+	}
+
+	if buildConfig.Builder != model.BuilderKindDocker &&
+		buildConfig.Builder != model.BuilderKindNixpack {
+		return ErrInvalidBuilder
+	}
+
+	if buildConfig.RootDirectory == "" {
+		buildConfig.RootDirectory = "/"
+	}
+
+	switch buildConfig.Builder {
+	case model.BuilderKindDocker:
+		if buildConfig.DockerfilePath == "" {
+			return ErrInvalidDockerfilePath
+		}
+	case model.BuilderKindNixpack:
+		if buildConfig.BuildCommand == "" ||
+			buildConfig.InstallCommand == "" ||
+			buildConfig.StartCommand == "" {
+			return ErrInvalidPhaseCommand
+		}
+	}
+
+	app.BuildPlan = buildConfig
+
+	app.State = model.ApplicationStateRollingOut
+	if err := c.updateApplication(ctx, app); err != nil {
+		c.l.WithFields(fields).Errorf("error updating application: %v", err)
+		return err
+	}
+
+	if err := c.BuildImage(ctx, app, app.BuiltCommit, user.Info.GithubAccessToken); err != nil {
+		c.l.WithFields(fields).Errorf("error building image: %v", err)
+		return err
+	}
+
+	return nil
+}
+
 func (c *Controller) RolloutApplication(ctx context.Context, user *model.User, app *model.Application) error {
 	if app.Kind != model.ApplicationKindWeb {
 		return ErrInvalidOperationWithCurrentKind
@@ -469,8 +544,7 @@ func (c *Controller) RolloutApplication(ctx context.Context, user *model.User, a
 
 	if app.State != model.ApplicationStateRunning &&
 		app.State != model.ApplicationStateFailed &&
-		app.State != model.ApplicationStateCrashed &&
-		app.State != model.ApplicationStateRollingOut {
+		app.State != model.ApplicationStateCrashed {
 		return ErrInvalidOperationInCurrentState
 	}
 
@@ -491,7 +565,8 @@ func (c *Controller) RolloutApplication(ctx context.Context, user *model.User, a
 		return err
 	}
 
-	if err := c.BuildImage(ctx, app, user.Info.GithubAccessToken); err != nil {
+	commitHash := "" //empty string means latest commit
+	if err := c.BuildImage(ctx, app, commitHash, user.Info.GithubAccessToken); err != nil {
 		c.l.Errorf("error building image: %v", err)
 		return err
 	}
