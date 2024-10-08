@@ -51,11 +51,11 @@ func (k K8sOrchestratedServiceManager) DeleteNamespace(ctx context.Context, name
 	return nil
 }
 
-func (k K8sOrchestratedServiceManager) CreateNewRegistrySecret(ctx context.Context, namespace, registryUrl, username, password string) (string, error) {
+func (k K8sOrchestratedServiceManager) CreateNewRegistrySecret(ctx context.Context, namespace, name, registryUrl, username, password string) (string, error) {
 	_, err := k.clientset.CoreV1().Secrets(namespace).Create(ctx,
 		&v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "registrypullsecret",
+				Name: name,
 			},
 			Type: v1.SecretTypeDockerConfigJson,
 			StringData: map[string]string{
