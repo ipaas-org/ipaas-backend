@@ -50,8 +50,19 @@ func (c *Controller) CreateUser(ctx context.Context, info *model.UserInfo, role 
 	}
 	user.Namespace = namespace
 
-	if _, err := c.ServiceManager.CreateNewRegistrySecret(ctx, namespace, c.config.K8s.RegistryUrl, c.config.K8s.RegistryUsername, c.config.K8s.RegistryPassword); err != nil {
+	if _, err := c.ServiceManager.CreateNewRegistrySecret(ctx, namespace, staticPullSecretName, c.config.K8s.RegistryUrl, c.config.K8s.RegistryUsername, c.config.K8s.RegistryPassword); err != nil {
 		c.l.Errorf("error creating new registry secret: %v", err)
+		return nil, err
+	}
+
+	errorPageService, err := c.ServiceManager.GetService(ctx, c.config.Traefik.ErrorPageServiceNamespace, c.config.Traefik.ErrorPageServiceName)
+	if err != nil {
+		c.l.Errorf("error getting error page service: %v", err)
+		return nil, err
+	}
+
+	if _, err := c.ServiceManager.CreateNewErrorPageMiddleware(ctx, namespace, staticErrorPageMiddlewareName, []string{"502-503"}, errorPageService, "/{status}.html", nil); err != nil {
+		c.l.Errorf("error creating new error page middleware: %v", err)
 		return nil, err
 	}
 
