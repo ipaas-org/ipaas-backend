@@ -198,7 +198,13 @@ loop:
 	service.Deployment = deployment
 
 	host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
-	ingressRoute, err := c.createIngressRoute(ctx, app, user, host, service.Name, service.Port)
+	ingressRoute, err := c.createIngressRoute(ctx, app, user, host, service.Name, service.Port, []model.Middleware{
+		{
+			BaseResource: model.BaseResource{
+				Name:      "test-errors",
+				Namespace: "ipaas",
+			}},
+	})
 	if err != nil {
 		return err
 	}
