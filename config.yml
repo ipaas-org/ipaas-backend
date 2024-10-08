@@ -3,8 +3,9 @@ app:
   version: "0.1.0"
   deployment: "dev"
   apiUrl: "http://localhost:8082"
-  frontendUrl: "http://localhost:5173/"
-  baseDefaultDomain: "cargoway.cloud"
+  frontendUrl: "http://localhost:5174/"
+  baseDefaultDomain: "apps.cargoway.cloud"
+  tempFolderPath: "./tmp"
 
 rabbitmq:
   requestQueue: request-test
@@ -29,7 +30,8 @@ gitProvider:
   callbackUri: "/api/v1/oauth/callback"
 
 traefik:
-  apiBaseUrl: "http://ingress.dev.localhost"
+  errorPageServiceNamespace: "ipaas"
+  errorPageServiceName: "whoami-service"
 
 k8s:
   kubeConfigPath: "/home/vano/.kube/config"
@@ -38,5 +40,5 @@ k8s:
   registryUrl: "registry.cargoway.cloud"
 
 logProvider:
-  provider: "grafana-loki"
+  provider: "mock"
   baseUrl: "http://localhost:8090"
