@@ -273,7 +273,7 @@ func TestFullApplicationStartup(t *testing.T) {
 	}
 	t.Logf("service created: %+v", service)
 
-	ingress, err := manager.CreateNewIngressRoute(ctx, namespace, "test-ingress", "testing.cargoway.cloud", "test-service", 8080, defaultLabels)
+	ingress, err := manager.CreateNewIngressRoute(ctx, namespace, "test-ingress", "testing.cargoway.cloud", "test-service", 8080, nil, defaultLabels)
 	if err != nil {
 		t.Errorf("error creating ingress: %v\n", err)
 	}
