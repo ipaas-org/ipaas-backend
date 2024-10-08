@@ -94,7 +94,8 @@ func TestCreateNewDeployment(t *testing.T) {
 	manager := getTestK8sManager()
 	namespace := "test-namespace"
 	// realImage := "registry.cargoway.cloud/us-60ff775c-4915-4523-bf91-ccb63874d95d/65e8ab54c3086ba65b91cb16:22e7f5b80c0e537a72d09dae4de7ab245c5ac8f9"
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	_, err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
 		t.Fatalf("error creating namespace: %v\n", err)
@@ -289,7 +290,8 @@ func TestFullApplicationStartup(t *testing.T) {
 func TestNewServiceCreation(t *testing.T) {
 	manager := getTestK8sManager()
 	namespace := "test-namespace"
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	_, err := manager.CreateNewNamespace(ctx, namespace, defaultLabels)
 	if err != nil {
 		t.Fatalf("error creating namespace: %v\n", err)

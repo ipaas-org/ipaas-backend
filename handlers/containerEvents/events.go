@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
-	"time"
 
 	"github.com/ipaas-org/ipaas-backend/controller"
 	"github.com/ipaas-org/ipaas-backend/model"
@@ -16,8 +15,11 @@ import (
 
 type watchGeneratorFunc func(context.Context) (watch.Interface, error)
 
+var FakeWatchGeneratorFunc = func(ctx context.Context) (watch.Interface, error) {
+	return nil, nil
+}
+
 type ContainerEventHandler struct {
-	// cli        *client.Client
 	watch          watch.Interface
 	watchGenerator watchGeneratorFunc
 	controller     *controller.Controller
@@ -239,6 +241,5 @@ func (c *ContainerEventHandler) start(ctx context.Context) {
 				}
 			}
 		}
-		time.Sleep(50 * time.Millisecond)
 	}
 }

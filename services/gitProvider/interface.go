@@ -35,4 +35,5 @@ var (
 	ErrRateLimitReached error = errors.New("rate limit reached")
 	ErrRepoNotFound     error = errors.New("repo not found")
 	ErrNoCommitsFound   error = errors.New("no commits found")
+	ErrBranchNotFound   error = errors.New("branch not found")
 )

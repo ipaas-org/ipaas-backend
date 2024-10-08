@@ -32,7 +32,7 @@ func NewIpaasImageBuilder(uri, requestQueue string) *IpaasImageBuilder {
 	}
 }
 
-func (i *IpaasImageBuilder) BuildImage(ctx context.Context, info model.Request) error {
+func (i *IpaasImageBuilder) BuildImage(ctx context.Context, info model.BuildRequest) error {
 	body, err := json.Marshal(info)
 	if err != nil {
 		return fmt.Errorf("json.Marshal: %w", err)

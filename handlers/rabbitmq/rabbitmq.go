@@ -150,10 +150,10 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 			r.l.Info("received message from rabbitmq")
 			r.l.Debugf("received: %q", string(d.Body))
 			if d.Body == nil {
-				// if err := d.Ack(false); err != nil {
-				// 	r.l.Errorf("r.Consume.Ack(): %v:", err)
-				// 	return
-				// }
+				if err := d.Ack(false); err != nil {
+					r.l.Errorf("r.Consume.Ack(): %v:", err)
+					return
+				}
 				continue
 			}
 			response := new(model.BuildResponse)
@@ -191,7 +191,7 @@ func (r *RabbitMQ) consume(ctx context.Context) {
 				// }
 			}
 
-			if err := r.Controller.CreateApplicationFromApplicationIDandImageID(ctx, response.ApplicationID, response.ImageName, response.BuiltCommit); err != nil {
+			if err := r.Controller.CreateApplicationFromApplicationIDandImageID(ctx, response.ApplicationID, response); err != nil {
 				r.l.Errorf("error creating application after image builder response %v:", err)
 				// if err := d.Nack(false, false); err != nil {
 				// 	r.l.Errorf("r.Consume.Nack(): %v:", err)

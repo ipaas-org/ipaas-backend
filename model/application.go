@@ -34,8 +34,9 @@ type (
 		Service       *Service           `bson:"service" json:"-"`
 		Envs          []KeyValue         `bson:"envs" json:"envs"`
 		BasedOn       string             `bson:"basedOn" json:"basedOn"` //id of the template the application is based on
-		BuildConfig   *BuildConfig       `bson:"buildConfig" json:"buildConfig"`
+		BuildPlan     *BuildConfig       `bson:"buildPlan" json:"buildPlan"`
 		BuildOutput   string             `bson:"buildOutput" json:"buildOutput"`
+		RepoAnalisys  *RepoAnalisys      `bson:"repoAnalysis" json:"repoAnalysis"`
 		// Image          *Image             `bson:"image" json:"image,omitempty"`
 	}
 

@@ -1,45 +1,23 @@
 package model
 
 type (
-	BuildResponse struct {
-		ApplicationID string             `json:"applicationID"`
-		Repo          string             `json:"repo"`
-		Status        ResponseStatus     `json:"status"` // success | failed
-		ImageID       string             `json:"imageID"`
-		ImageName     string             `json:"imageName"`
-		BuiltCommit   string             `json:"buildCommit"`
-		IsError       bool               `json:"isError"`
-		Fault         ResponseErrorFault `json:"fault"` // service | user
-		Message       string             `json:"message"`
-		BuildOutput   string             `json:"buildOutput"`
-	}
-
-	ResponseStatus     string
-	ResponseErrorFault string
-
-	// BuildRequest struct {
-	// 	ApplicationID string `json:"applicationID"`
-	// 	Token         string `json:"token"`
-	// 	UserID        string `json:"userID"`
-	// 	Type          string `json:"type"`      // repo, tag, release, ...
-	// 	Connector     string `json:"connector"` //github, gitlab, ...
-	// 	Repo          string `json:"repo,omitempty"`
-	// 	Branch        string `json:"branch,omitempty"`
-	// 	Tag           string `json:"tag,omitempty"`
-	// 	Release       string `json:"release,omitempty"`
-	// 	// Binary     string `json:"binary, omitempty"`
-	// }
-
-	Request struct {
+	BuildRequest struct {
 		ApplicationID string           `json:"applicationID"`
 		PullInfo      *PullInfoRequest `json:"pullInfo"`
 		BuildPlan     *BuildConfig     `json:"buildPlan"`
 	}
 
 	BuildConfig struct {
-		Builder        string     `json:"builder"`
-		RootDirectory  string     `json:"rootDirectory"`
-		DockerfilePath string     `json:"dockerfilePath"`
+		// must
+		RootDirectory string `json:"rootDirectory"`
+
+		// shared
+		Builder BuilderKind `json:"builder"`
+
+		// docker
+		DockerfilePath string `json:"dockerfilePath"`
+
+		// nixpacks
 		NixpacksPath   string     `json:"nixpacksPath"`
 		Envs           []KeyValue `json:"envs"`
 		NixPkgs        []string   `json:"nixPkgs"`
@@ -56,7 +34,28 @@ type (
 		Repo      string `json:"repo"`
 		Connector string `json:"connector"`
 		Branch    string `json:"branch"`
+		Commit    string `json:"commit"` //commit to build, use latest to build the latest commit
 	}
+)
+
+type (
+	BuildResponse struct {
+		ApplicationID string             `json:"applicationID"`
+		Repo          string             `json:"repo"`
+		Status        ResponseStatus     `json:"status"` // success | failed
+		ImageID       string             `json:"imageID"`
+		ImageName     string             `json:"imageName"`
+		BuiltCommit   string             `json:"buildCommit"`
+		IsError       bool               `json:"isError"`
+		Fault         ResponseErrorFault `json:"fault"` // service | user
+		Message       string             `json:"message"`
+		BuildOutput   string             `json:"buildOutput"`
+		PlanUsed      *BuildConfig       `json:"buildPlan"`
+		RepoAnalisys  *RepoAnalisys      `json:"repoAnalysis"`
+	}
+
+	ResponseStatus     string
+	ResponseErrorFault string
 )
 
 const (

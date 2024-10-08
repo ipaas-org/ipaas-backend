@@ -53,7 +53,8 @@ func (h *httpHandler) RegisterRoutes() {
 
 	//specific application routes
 	application.GET("/:applicationID", h.GetApplication)
-	application.PATCH("/:applicationID/update", h.UpdateApplication)
+	application.PATCH("/:applicationID/update/general", h.UpdateApplicationGeneral)
+	application.PATCH("/:applicationID/update/build", h.UpdateApplicationBuild)
 	application.DELETE("/:applicationID/delete", h.DeleteApplication)
 	application.GET("/:applicationID/redeploy", h.RedeployApplication)
 	application.GET("/:applicationID/status", h.GetApplicationStatus)
@@ -69,6 +70,9 @@ func (h *httpHandler) RegisterRoutes() {
 	templates := api.Group("/templates")
 	templates.GET("/list", h.ListTemplates)
 	templates.GET("/:code", h.GetTemplate)
+
+	// analyze := authGroup.Group("/analyze")
+	// analyze.POST("/repo", h.AnalyzeRepositoryContent)
 
 	// adminGroup := api.Group("/admin", h.jwtHeaderCheckerMiddleware, h.adminCheckerMiddleware)
 	// adminUser := adminGroup.Group("/user")

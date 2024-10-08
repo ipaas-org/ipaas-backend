@@ -4,6 +4,7 @@ import (
 	"runtime/debug"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func (h *httpHandler) jwtHeaderCheckerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
@@ -12,8 +13,11 @@ func (h *httpHandler) jwtHeaderCheckerMiddleware(next echo.HandlerFunc) echo.Han
 		defer func() {
 			if r := recover(); r != nil {
 				h.l.Errorf("router panic, recovering: \nerror: %v\n\nstack: %s", r, string(debug.Stack()))
+				respError(c, 500, "unexpected error", "", ErrUnexpected)
 			}
 		}()
+
+		middleware.Recover()
 
 		accessToken, httperr := h.GetAccessToken(c)
 		if httperr != nil {
