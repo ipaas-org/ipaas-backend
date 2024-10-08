@@ -6,13 +6,15 @@ import (
 	"github.com/ipaas-org/ipaas-backend/model"
 )
 
-func (c *Controller) BuildImage(ctx context.Context, app *model.Application, providerToken string) error {
+// send request to image builder, to build a specific commit use the commit hash, leave blank
+// to build the latest commit
+func (c *Controller) BuildImage(ctx context.Context, app *model.Application, commit, providerToken string) error {
 	if app.State == model.ApplicationStateBuilding ||
 		app.State == model.ApplicationStateStarting {
 		return ErrInvalidOperationInCurrentState
 	}
 
-	request := model.Request{
+	request := model.BuildRequest{
 		ApplicationID: app.ID.Hex(),
 		PullInfo: &model.PullInfoRequest{
 			Token:     providerToken,
@@ -20,8 +22,9 @@ func (c *Controller) BuildImage(ctx context.Context, app *model.Application, pro
 			Connector: "github",
 			Repo:      app.GithubRepo,
 			Branch:    app.GithubBranch,
+			Commit:    commit,
 		},
-		BuildPlan: app.BuildConfig,
+		BuildPlan: app.BuildPlan,
 	}
 
 	c.l.Debugf("sending to rmq: %+v ", request)
@@ -29,10 +32,10 @@ func (c *Controller) BuildImage(ctx context.Context, app *model.Application, pro
 		c.l.Errorf("error sending image to image builder: %v", err)
 		app.State = model.ApplicationStateFailed
 		if err := c.updateApplication(ctx, app); err != nil {
+			c.l.Errorf("error updating application state: %v", err)
 			return err
 		}
 		return err
 	}
-
 	return nil
 }
