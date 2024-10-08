@@ -31,6 +31,7 @@ type (
 		ApiUrl            string `env-required:"true" yaml:"apiUrl" env:"APP_API_URL"`
 		FrontendUrl       string `env-required:"true" yaml:"frontendUrl" env:"APP_FRONTEND_URL"`
 		BaseDefaultDomain string `env-required:"true" yaml:"baseDefaultDomain" env:"APP_BASE_DEFAULT_DOMAIN"`
+		TempFolderPath    string `env-required:"true" yaml:"tempFolderPath" env:"APP_TEMP_FOLDER_PATH"`
 	}
 
 	Log struct {
@@ -67,9 +68,11 @@ type (
 	}
 
 	Traefik struct {
-		ApiBaseUrl string `env-required:"true" yaml:"apiBaseUrl" env:"TRAEFIK_API_BASE_URL"`
-		Username   string `env:"TRAEFIK_USERNAME"`
-		Password   string `env:"TRAEFIK_PASSWORD"`
+		// ApiBaseUrl string `env-required:"true" yaml:"apiBaseUrl" env:"TRAEFIK_API_BASE_URL"`
+		// Username   string `env:"TRAEFIK_USERNAME"`
+		// Password   string `env:"TRAEFIK_PASSWORD"`
+		ErrorPageServiceNamespace string `env-required:"true" yaml:"errorPageServiceNamespace" env:"TRAEFIK_ERROR_PAGE_SERVICE_NAMESPACE"`
+		ErrorPageServiceName      string `env-required:"true" yaml:"errorPageServiceName" env:"TRAEFIK_ERROR_PAGE_SERVICE_NAME"`
 	}
 
 	K8s struct {
