@@ -96,13 +96,13 @@ func (c *Controller) createService(ctx context.Context, app *model.Application, 
 	return service, nil
 }
 
-func (c *Controller) createIngressRoute(ctx context.Context, app *model.Application, user *model.User, host, serviceName string, listeningPort int32) (*model.IngressRoute, error) {
+func (c *Controller) createIngressRoute(ctx context.Context, app *model.Application, user *model.User, host, serviceName string, listeningPort int32, middlewares []model.Middleware) (*model.IngressRoute, error) {
 	c.l.Debugf("creating ingress route for application %s", app.Name)
 	resourceName := fmt.Sprintf("ir-%s-%s", app.Name, app.ID.Hex())
 	ingressRouteLabels := c.filledDefaultLabels(user, app, resourceName)
 	// host := fmt.Sprintf("%s.%s", app.Name, c.app.BaseDefaultDomain)
 	match := fmt.Sprintf("Host(`%s`)", host)
-	ingressRoute, err := c.ServiceManager.CreateNewIngressRoute(ctx, user.Namespace, resourceName, match, serviceName, listeningPort, ingressRouteLabels)
+	ingressRoute, err := c.ServiceManager.CreateNewIngressRoute(ctx, user.Namespace, resourceName, match, serviceName, listeningPort, middlewares, ingressRouteLabels)
 	if err != nil {
 		c.l.Errorf("error creating ingress route: %v", err)
 		return nil, err

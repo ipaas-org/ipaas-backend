@@ -233,7 +233,13 @@ loop:
 	}
 	service.Deployment = deployment
 
-	ingressRoute, err := c.createIngressRoute(ctx, app, user, app.DnsName, service.Name, service.Port)
+	ingressRoute, err := c.createIngressRoute(ctx, app, user, app.DnsName, service.Name, service.Port, []model.Middleware{
+		{
+			BaseResource: model.BaseResource{
+				Name:      "test-errors",
+				Namespace: "ipaas",
+			}},
+	})
 	if err != nil {
 		return err
 	}
