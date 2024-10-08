@@ -22,6 +22,13 @@ var (
 	ErrNoChanges                       = errors.New("no changes")
 	ErrLastVersionAlreadyDeployed      = errors.New("last version already deployed")
 	ErrInvalidOperationWithCurrentKind = errors.New("invalid operation with current kind")
+	ErrInexistingRootDir               = errors.New("inxisting root dir provided")
+
+	// build
+	ErrInvalidBuildPlan      = errors.New("invalid build plan")
+	ErrInvalidBuilder        = errors.New("invalid builder")
+	ErrInvalidDockerfilePath = errors.New("invalid dockerfile path")
+	ErrInvalidPhaseCommand   = errors.New("invalid command for phase")
 
 	//templates errors
 	ErrMissingRequiredEnvForTemplate = errors.New("missing required env for template")
