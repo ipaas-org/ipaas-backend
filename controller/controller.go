@@ -17,12 +17,16 @@ import (
 )
 
 const (
-	staticTempEnvironment = "prod"
+	staticTempEnvironment         = "prod"
+	staticPullSecretName          = "registrypullsecret"
+	staticErrorPageMiddlewareName = "errorpagemiddleware"
 )
 
 type Controller struct {
+	// controller specific
 	l *logrus.Logger
 
+	// repositories
 	UserRepo        repo.UserRepoer
 	TokenRepo       repo.TokenRepoer
 	StateRepo       repo.StateRepoer
@@ -30,14 +34,17 @@ type Controller struct {
 	TemplateRepo    repo.TemplateRepoer
 	TempTokenRepo   repo.TemporaryTokenStorage
 
+	// services
 	gitProvider    gitProvider.Provider
 	jwtHandler     *jwt.JWThandler
 	ServiceManager *k8smanager.K8sOrchestratedServiceManager
-	app            config.App
-	traefik        config.Traefik
-	config         *config.Config
 	imageBuilder   imageBuilder.ImageBuilder
 	logProvider    logprovider.LogProvider
+
+	// configs
+	app     config.App
+	traefik config.Traefik
+	config  *config.Config
 }
 
 func NewController(ctx context.Context, config *config.Config, l *logrus.Logger) *Controller {
