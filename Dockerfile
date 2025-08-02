@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 
 # FROM scratch
 # use these 3 lines for debugging purposes
-FROM ubuntu 
+FROM ubuntu:24.10 
 RUN apt update
 RUN apt install -y git curl iputils-ping
 # RUN mkdir -p /ipaas
